@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: codesentinel-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - AI_PROVIDER=auto
+      - UPLOADS_DIR=/app/data/uploads
+      - PROJECTS_DIR=/app/data/projects
+    volumes:
+      - ./data:/app/data
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: codesentinel-frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
