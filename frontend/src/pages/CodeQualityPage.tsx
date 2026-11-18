@@ -10,10 +10,13 @@ interface CodeQualityPageProps {
 
 export const CodeQualityPage: React.FC<CodeQualityPageProps> = ({ latestAudit, findings }) => {
   const qualityFindings = findings.filter(f => f.category === 'quality');
-  const slopScore = latestAudit?.slop_score || 0;
+
+  if (!latestAudit) {
+    return <div className="page-frame py-16 text-center text-sm text-slate-400" role="status">Run an audit to see code-quality scores and findings.</div>;
+  }
 
   return (
-    <div className="flex flex-col gap-8 py-6 px-6 max-w-7xl mx-auto">
+    <div className="page-frame flex flex-col gap-8 py-6 px-6 max-w-7xl mx-auto">
       {/* Header */}
       <div>
         <div className="flex items-center gap-2">
@@ -31,7 +34,7 @@ export const CodeQualityPage: React.FC<CodeQualityPageProps> = ({ latestAudit, f
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <ScoreCard
           title="Code Slop Score"
-          score={slopScore}
+          score={latestAudit.slop_score}
           subtitle="Quantifies duplicate logic, dead code, and nesting"
           invertColors={true}
           icon={<Scissors className="w-5 h-5 text-amber-400" />}

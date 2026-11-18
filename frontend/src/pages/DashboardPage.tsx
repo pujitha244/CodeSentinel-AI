@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Project, Audit, Finding, VulnerabilityChain } from '../types';
-import { ScoreCard } from '../components/common/ScoreCard';
 import { SeverityBadge } from '../components/common/SeverityBadge';
 import { 
   ShieldAlert, 
@@ -61,9 +60,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   const criticalFindings = findings.filter(f => f.severity === 'critical');
   const highFindings = findings.filter(f => f.severity === 'high');
+  const severityDistribution = [
+    { severity: 'Critical', color: '#f87171', count: findings.filter(f => f.severity === 'critical').length },
+    { severity: 'High', color: '#fb923c', count: findings.filter(f => f.severity === 'high').length },
+    { severity: 'Medium', color: '#fbbf24', count: findings.filter(f => f.severity === 'medium').length },
+    { severity: 'Low', color: '#38bdf8', count: findings.filter(f => f.severity === 'low').length },
+    { severity: 'Info', color: '#94a3b8', count: findings.filter(f => f.severity === 'info').length }
+  ];
+  const findingTotal = severityDistribution.reduce((total, item) => total + item.count, 0);
 
   return (
-    <div className="flex flex-col gap-8 py-6 px-6 max-w-7xl mx-auto">
+    <div className="page-frame flex flex-col gap-8 py-6 px-6 max-w-7xl mx-auto">
       {/* Top Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
@@ -96,38 +103,27 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
       </div>
 
-      {/* Scorecards Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <ScoreCard
-          title="Engineering Health"
-          score={latestAudit.engineering_health_score}
-          subtitle="Weighted holistic architecture score"
-          icon={<Activity className="w-4 h-4 text-emerald-400" />}
-        />
-        <ScoreCard
-          title="Security Posture"
-          score={latestAudit.security_score}
-          subtitle={`${latestAudit.critical_count} critical, ${latestAudit.high_count} high findings`}
-          icon={<ShieldAlert className="w-4 h-4 text-rose-400" />}
-        />
-        <ScoreCard
-          title="Code Slop Score"
-          score={latestAudit.slop_score}
-          subtitle="Dead code, duplicate blocks, nesting"
-          invertColors={true}
-          icon={<Code2 className="w-4 h-4 text-amber-400" />}
-        />
-        <ScoreCard
-          title="Implementation Completeness"
-          score={latestAudit.completeness_score}
-          subtitle="Evaluates TODOs, logic gaps & edge cases"
-          icon={<CheckCircle2 className="w-4 h-4 text-sky-400" />}
-        />
-      </div>
+      <section aria-label="Audit scores" className="grid grid-cols-2 lg:grid-cols-4 border-y border-slate-800 divide-x divide-slate-800">
+        {[
+          { label: 'Engineering health', score: latestAudit.engineering_health_score, note: 'Composite score' },
+          { label: 'Security posture', score: latestAudit.security_score, note: `${latestAudit.critical_count} critical · ${latestAudit.high_count} high` },
+          { label: 'Code slop', score: latestAudit.slop_score, note: 'Lower is cleaner' },
+          { label: 'Completeness', score: latestAudit.completeness_score, note: 'Logic gaps and deferred work' }
+        ].map((metric) => (
+          <div key={metric.label} className="min-w-0 px-4 py-4 first:pl-0">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{metric.label}</div>
+            <div className="mt-1 flex items-baseline gap-1">
+              <span className="font-mono text-2xl font-semibold text-slate-100">{metric.score}</span>
+              <span className="text-xs text-slate-500">/100</span>
+            </div>
+            <div className="mt-1 text-[10px] text-slate-500 truncate">{metric.note}</div>
+          </div>
+        ))}
+      </section>
 
       {/* Flagship Chain Spotlight */}
       {chains.length > 0 && (
-        <div className="rounded-2xl border border-rose-900/60 bg-gradient-to-r from-rose-950/40 via-sentinel-900 to-sentinel-900 p-6 shadow-xl relative overflow-hidden">
+        <div className="rounded-xl border border-rose-900/60 bg-[#11171e] p-6 relative overflow-hidden">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-rose-950 border border-rose-800 text-rose-400">
@@ -171,7 +167,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
       )}
 
-      {/* Two Column Layout: Urgent Findings & Architecture Summary */}
+      {/* Two Column Layout: Priorities & Evidence Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Urgent Findings */}
         <div className="rounded-xl border border-slate-800 bg-sentinel-900/80 p-5 flex flex-col justify-between">
@@ -215,57 +211,58 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </div>
         </div>
 
-        {/* Project Profile & Structure */}
+        {/* Evidence Distribution */}
         <div className="rounded-xl border border-slate-800 bg-sentinel-900/80 p-5 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-indigo-400" />
-                Repository Structural Profile
+                <ShieldAlert className="w-4 h-4 text-indigo-400" />
+                Finding severity distribution
               </h3>
-              <button 
-                onClick={() => navigate('/architecture')}
-                className="text-xs text-indigo-400 hover:text-indigo-300 font-medium"
-              >
-                Open Graph →
-              </button>
+              <span className="font-mono text-xs text-slate-500">{findingTotal} findings</span>
             </div>
 
-            <div className="mt-4 space-y-4 text-xs">
-              <div className="flex items-center justify-between py-1.5 border-b border-slate-800/60">
-                <span className="text-slate-400">Primary Languages</span>
-                <span className="font-semibold text-slate-200 font-mono">
-                  {currentProject.meta_info?.languages?.join(', ') || 'Python'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between py-1.5 border-b border-slate-800/60">
-                <span className="text-slate-400">Detected Frameworks</span>
-                <span className="font-semibold text-slate-200 font-mono">
-                  {currentProject.meta_info?.frameworks?.join(', ') || 'FastAPI'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between py-1.5 border-b border-slate-800/60">
-                <span className="text-slate-400">Indexed Source Files</span>
-                <span className="font-semibold text-slate-200 font-mono">
-                  {currentProject.meta_info?.file_count || 6} files
-                </span>
-              </div>
-              <div className="flex items-center justify-between py-1.5">
-                <span className="text-slate-400">Source Entry Points</span>
-                <span className="font-semibold text-slate-200 font-mono truncate max-w-[200px]">
-                  {currentProject.meta_info?.entry_points?.join(', ') || 'routes.py'}
-                </span>
-              </div>
-            </div>
+            {findingTotal > 0 ? (
+              <>
+                <div
+                  className="mt-5 h-3 w-full overflow-hidden rounded-sm bg-slate-800 flex"
+                  role="img"
+                  aria-label={severityDistribution.map(item => `${item.severity}: ${item.count}`).join(', ')}
+                >
+                  {severityDistribution.filter(item => item.count > 0).map(item => (
+                    <span
+                      key={item.severity}
+                      title={`${item.severity}: ${item.count}`}
+                      style={{ width: `${(item.count / findingTotal) * 100}%`, backgroundColor: item.color }}
+                    />
+                  ))}
+                </div>
+                <ul className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3">
+                  {severityDistribution.map(item => (
+                    <li key={item.severity} className="flex items-center justify-between gap-3 text-xs">
+                      <span className="flex items-center gap-2 text-slate-400">
+                        <span className="h-2 w-2 rounded-sm" style={{ backgroundColor: item.color }} />
+                        {item.severity}
+                      </span>
+                      <span className="font-mono text-slate-200">{item.count}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p className="mt-5 text-xs text-slate-400" role="status">No findings were returned for this audit.</p>
+            )}
           </div>
 
           <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between">
-            <span className="text-[11px] text-slate-500">Autonomous Security Auditor</span>
+            <span className="text-[11px] text-slate-500">
+              {currentProject.meta_info?.file_count != null ? `${currentProject.meta_info.file_count} indexed files` : 'File count not reported'}
+            </span>
             <button
-              onClick={() => navigate('/reports')}
+              onClick={() => navigate('/architecture')}
               className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold"
             >
-              Export Comprehensive Report →
+              View architecture →
             </button>
           </div>
         </div>

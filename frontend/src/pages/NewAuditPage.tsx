@@ -106,7 +106,7 @@ export const NewAuditPage: React.FC<NewAuditPageProps> = ({ onAuditComplete }) =
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-6 flex flex-col gap-8">
+    <div className="page-frame max-w-4xl mx-auto py-8 px-6 flex flex-col gap-8">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-white tracking-tight">Launch Autonomous Audit</h1>

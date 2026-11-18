@@ -4,7 +4,8 @@ class FindingCorrelator:
     @staticmethod
     def correlate_and_deduplicate(
         findings: List[Dict[str, Any]], 
-        chains: List[Dict[str, Any]]
+        chains: List[Dict[str, Any]],
+        audit_id: str = ""
     ) -> Tuple[List[Dict[str, Any]], Dict[str, float]]:
         """
         1. Avoids double-counting: Links raw scanner findings that belong to a vulnerability chain
@@ -15,6 +16,7 @@ class FindingCorrelator:
         """
         unique_findings = []
         seen_keys = set()
+        audit_suffix = audit_id.removeprefix("audit-")
 
         # Step 1: Create Parent Findings for every Vulnerability Chain
         for chain in chains:
@@ -23,7 +25,7 @@ class FindingCorrelator:
             sink_line = chain["sink_line"]
             
             parent_finding = {
-                "id": f"CS-CHAIN-{chain_id.split('-')[-1]}",
+                "id": chain_id,
                 "title": chain["title"],
                 "category": "security",
                 "severity": chain["severity"],
@@ -74,22 +76,22 @@ class FindingCorrelator:
 
             # Assign prefix ID
             if category == "security":
-                f_id = f"CS-SEC-{sec_idx:04d}"
+                f_id = f"CS-SEC-{audit_suffix}-{sec_idx:04d}" if audit_suffix else f"CS-SEC-{sec_idx:04d}"
                 sec_idx += 1
             elif category == "secret":
-                f_id = f"CS-SECR-{secr_idx:04d}"
+                f_id = f"CS-SECR-{audit_suffix}-{secr_idx:04d}" if audit_suffix else f"CS-SECR-{secr_idx:04d}"
                 secr_idx += 1
             elif category == "logic_gap":
-                f_id = f"CS-GAP-{gap_idx:04d}"
+                f_id = f"CS-GAP-{audit_suffix}-{gap_idx:04d}" if audit_suffix else f"CS-GAP-{gap_idx:04d}"
                 gap_idx += 1
             elif category == "loose_end":
-                f_id = f"CS-LOOSE-{loose_idx:04d}"
+                f_id = f"CS-LOOSE-{audit_suffix}-{loose_idx:04d}" if audit_suffix else f"CS-LOOSE-{loose_idx:04d}"
                 loose_idx += 1
             elif category == "dependency":
-                f_id = f"CS-DEP-{dep_idx:04d}"
+                f_id = f"CS-DEP-{audit_suffix}-{dep_idx:04d}" if audit_suffix else f"CS-DEP-{dep_idx:04d}"
                 dep_idx += 1
             else:
-                f_id = f"CS-QUAL-{qual_idx:04d}"
+                f_id = f"CS-QUAL-{audit_suffix}-{qual_idx:04d}" if audit_suffix else f"CS-QUAL-{qual_idx:04d}"
                 qual_idx += 1
 
             f["id"] = f_id

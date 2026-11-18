@@ -7,18 +7,31 @@ from backend.app.remediation.remediation_engine import RemediationEngine
 
 router = APIRouter(prefix="/findings", tags=["Findings"])
 
+def _get_finding(db: Session, finding_id: str) -> Finding:
+    matches = (
+        db.query(Finding)
+        .filter(Finding.id == finding_id)
+        .order_by(Finding.created_at.desc())
+        .limit(2)
+        .all()
+    )
+    if not matches:
+        raise HTTPException(status_code=404, detail="Finding not found")
+    if len(matches) > 1:
+        raise HTTPException(
+            status_code=409,
+            detail="This legacy finding ID is ambiguous across audits; reload the latest audit."
+        )
+    return matches[0]
+
+
 @router.get("/{finding_id}", response_model=FindingResponse)
 def get_finding(finding_id: str, db: Session = Depends(get_db)):
-    finding = db.query(Finding).filter(Finding.id == finding_id).first()
-    if not finding:
-        raise HTTPException(status_code=404, detail="Finding not found")
-    return finding
+    return _get_finding(db, finding_id)
 
 @router.post("/{finding_id}/explain")
 def explain_finding(finding_id: str, db: Session = Depends(get_db)):
-    finding = db.query(Finding).filter(Finding.id == finding_id).first()
-    if not finding:
-        raise HTTPException(status_code=404, detail="Finding not found")
+    finding = _get_finding(db, finding_id)
 
     explanation = (
         f"### Technical Analysis: {finding.title}\n\n"
@@ -38,9 +51,7 @@ def explain_finding(finding_id: str, db: Session = Depends(get_db)):
 
 @router.post("/{finding_id}/suggest-fix")
 def suggest_fix(finding_id: str, db: Session = Depends(get_db)):
-    finding = db.query(Finding).filter(Finding.id == finding_id).first()
-    if not finding:
-        raise HTTPException(status_code=404, detail="Finding not found")
+    finding = _get_finding(db, finding_id)
 
     project = db.query(Project).filter(Project.id == finding.project_id).first()
     if not project:

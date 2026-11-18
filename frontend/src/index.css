@@ -1,44 +1,231 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.js";
 
 :root {
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   color-scheme: dark;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  background: #090d13;
+  color: #e6edf3;
+  font-optical-sizing: auto;
 }
 
-code, pre, .font-mono {
-  font-family: 'JetBrains Mono', monospace;
+* {
+  box-sizing: border-box;
 }
 
-/* Custom scrollbars */
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: #090d13;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #53b8c5;
+  outline-offset: 2px;
+}
+
+code,
+pre,
+.font-mono {
+  font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+}
+
+::selection {
+  color: #f5fbfc;
+  background: #155e63;
+}
+
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0b1120;
+  background: #0c1118;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 3px;
+  border: 2px solid #0c1118;
+  border-radius: 999px;
+  background: #293542;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #3a4b5a;
 }
 
-/* Glow effects */
-.glow-cyan {
-  box-shadow: 0 0 25px -5px rgba(6, 182, 212, 0.25);
+@layer components {
+  .page-frame {
+    width: min(100%, 90rem);
+    margin-inline: auto;
+    padding: 2rem clamp(1rem, 3vw, 2.5rem);
+  }
+
+  .app-panel {
+    border: 1px solid #202b37;
+    border-radius: 0.75rem;
+    background: #101720;
+  }
 }
 
-.glow-rose {
-  box-shadow: 0 0 25px -5px rgba(244, 63, 94, 0.25);
+main {
+  background:
+    radial-gradient(ellipse at 70% -30%, rgb(28 65 76 / 18%), transparent 48%),
+    #0b1017;
 }
 
-.glow-blue {
-  box-shadow: 0 0 25px -5px rgba(59, 130, 246, 0.25);
+.page-frame {
+  isolation: isolate;
+}
+
+.page-frame h1 {
+  color: #f1f5f9;
+  font-size: clamp(1.35rem, 2vw, 1.75rem);
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+}
+
+.page-frame > :first-child p {
+  max-width: 70ch;
+  color: #91a0ad;
+  line-height: 1.65;
+}
+
+.page-frame [class*="rounded-2xl"][class*="border"][class*="bg-sentinel-900"],
+.page-frame [class*="rounded-xl"][class*="border"][class*="bg-sentinel-900"] {
+  border-color: #202b37;
+  background-color: #101720;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.page-frame button {
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.page-frame :is(input, select, textarea) {
+  border-color: #2a3744;
+  background-color: #0b1118;
+  color: #e2e8f0;
+}
+
+.page-frame :is(input, select, textarea)::placeholder {
+  color: #71808e;
+}
+
+.page-frame table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.page-frame thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  border-bottom: 1px solid #283542;
+  background: #111922;
+  color: #9aa8b5;
+  font-weight: 600;
+  letter-spacing: 0.055em;
+}
+
+.page-frame tbody tr {
+  transition: background-color 120ms ease;
+}
+
+.page-frame tbody tr:hover {
+  background: #141e28;
+}
+
+.page-frame pre,
+.page-frame code {
+  overflow-wrap: anywhere;
+}
+
+.page-frame .animate-pulse,
+.page-frame .animate-ping,
+.page-frame .animate-bounce {
+  animation: none;
+}
+
+@media (max-width: 640px) {
+  .page-frame {
+    padding: 1.25rem 1rem 5rem;
+  }
+
+  .page-frame [class*="overflow-x-auto"] {
+    overscroll-behavior-x: contain;
+  }
+
+  aside {
+    position: fixed !important;
+    inset: auto 0 0;
+    z-index: 50;
+    width: 100% !important;
+    height: 3.75rem !important;
+    overflow: hidden !important;
+    border-top: 1px solid #202b37;
+    border-right: 0 !important;
+    padding: 0.25rem 0.35rem !important;
+    background: #0c1219 !important;
+  }
+
+  aside nav {
+    display: flex;
+    height: 100%;
+    gap: 0.25rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  aside nav section {
+    display: contents;
+  }
+
+  aside nav h2,
+  aside nav a span {
+    display: none;
+  }
+
+  aside nav a {
+    min-width: 2.65rem;
+    min-height: 2.75rem;
+    align-self: center;
+    border: 0;
+    border-radius: 0.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

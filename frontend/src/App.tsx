@@ -21,13 +21,15 @@ import { SettingsPage } from './pages/SettingsPage';
 
 function AppContent() {
   const navigate = useNavigate();
+  const [projects, setProjects] = useState<Project[]>([]);
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [latestAudit, setLatestAudit] = useState<Audit | null>(null);
   const [findings, setFindings] = useState<Finding[]>([]);
   const [chains, setChains] = useState<VulnerabilityChain[]>([]);
   const [isLoadingDemo, setIsLoadingDemo] = useState(false);
+  const [isSwitchingProject, setIsSwitchingProject] = useState(false);
+  const [appError, setAppError] = useState<string | null>(null);
 
-  // Initialize data on mount
   useEffect(() => {
     loadInitialData();
   }, []);
@@ -35,68 +37,124 @@ function AppContent() {
   const loadInitialData = async () => {
     try {
       const projects = await api.listProjects();
+      setProjects(projects);
       if (projects.length > 0) {
-        const proj = projects[0];
-        setCurrentProject(proj);
-        
-        const audits = await api.listAudits(proj.id);
-        if (audits.length > 0) {
-          const audit = audits[0];
-          setLatestAudit(audit);
-
-          const f = await api.getFindings(audit.id);
-          setFindings(f);
-
-          const c = await api.getVulnerabilityChains(proj.id);
-          setChains(c);
-        }
+        await handleSelectProject(projects[0].id, projects);
       }
     } catch (err) {
       console.error('Initialization error:', err);
+      setAppError(err instanceof Error ? err.message : 'Unable to load saved projects.');
+    }
+  };
+
+  const handleSelectProject = async (
+    projectId: string,
+    projectList: Project[] = projects
+  ) => {
+    const project = projectList.find((item) => item.id === projectId);
+    if (!project) return;
+
+    setIsSwitchingProject(true);
+    setAppError(null);
+    setCurrentProject(project);
+    setLatestAudit(null);
+    setFindings([]);
+    setChains([]);
+    try {
+      const audits = await api.listAudits(project.id);
+      if (audits.length > 0) {
+        const audit = audits[0];
+        const [projectFindings, projectChains] = await Promise.all([
+          api.getFindings(audit.id),
+          api.getVulnerabilityChains(project.id)
+        ]);
+        setLatestAudit(audit);
+        setFindings(projectFindings);
+        setChains(projectChains);
+      }
+    } catch (err) {
+      console.error('Project selection error:', err);
+      setAppError(err instanceof Error ? err.message : 'Unable to load project data.');
+    } finally {
+      setIsSwitchingProject(false);
     }
   };
 
   const handleLoadDemo = async () => {
     setIsLoadingDemo(true);
+    setAppError(null);
     try {
       const proj = await api.loadDemo();
+      setProjects((current) => [proj, ...current]);
       setCurrentProject(proj);
 
       const audit = await api.createAudit(proj.id);
+      const [projectFindings, projectChains] = await Promise.all([
+        api.getFindings(audit.id),
+        api.getVulnerabilityChains(proj.id)
+      ]);
       setLatestAudit(audit);
-
-      const f = await api.getFindings(audit.id);
-      setFindings(f);
-
-      const c = await api.getVulnerabilityChains(proj.id);
-      setChains(c);
-
-      setIsLoadingDemo(false);
+      setFindings(projectFindings);
+      setChains(projectChains);
       navigate('/dashboard');
     } catch (err) {
       console.error('Demo launch error:', err);
+      setAppError(err instanceof Error ? err.message : 'Unable to load the demo project.');
+    } finally {
       setIsLoadingDemo(false);
     }
   };
 
-  const handleAuditComplete = (proj: Project, audit: Audit) => {
+  const handleAuditComplete = async (proj: Project, audit: Audit) => {
+    setAppError(null);
+    setProjects((current) =>
+      current.some((item) => item.id === proj.id) ? current : [proj, ...current]
+    );
     setCurrentProject(proj);
     setLatestAudit(audit);
-    api.getFindings(audit.id).then(setFindings);
-    api.getVulnerabilityChains(proj.id).then(setChains);
+    try {
+      const [projectFindings, projectChains] = await Promise.all([
+        api.getFindings(audit.id),
+        api.getVulnerabilityChains(proj.id)
+      ]);
+      setFindings(projectFindings);
+      setChains(projectChains);
+    } catch (err) {
+      console.error('Audit result loading error:', err);
+      setAppError(err instanceof Error ? err.message : 'Audit completed but results could not be loaded.');
+    }
   };
 
   return (
     <div className="min-h-screen bg-sentinel-950 text-slate-100 flex flex-col">
       <Navbar
         currentProject={currentProject}
+        projects={projects}
+        onSelectProject={(projectId) => handleSelectProject(projectId)}
         onLoadDemo={handleLoadDemo}
         isLoadingDemo={isLoadingDemo}
       />
       
       <div className="flex flex-1">
         <Sidebar />
-        <main className="flex-1 overflow-y-auto min-h-[calc(100vh-4rem)]">
+        <main className="min-w-0 flex-1 overflow-y-auto min-h-[calc(100vh-3.5rem)]">
+          {appError && (
+            <div className="mx-6 mt-4 flex items-start justify-between gap-4 border border-rose-900/70 bg-rose-950/40 px-4 py-3 text-sm text-rose-200" role="alert">
+              <span>{appError}</span>
+              <button
+                type="button"
+                onClick={() => setAppError(null)}
+                className="shrink-0 text-rose-300 underline underline-offset-2"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+          {isSwitchingProject && (
+            <div className="px-6 pt-3 text-xs text-slate-400" role="status">
+              Loading selected project…
+            </div>
+          )}
           <Routes>
             <Route path="/" element={<LandingPage onLoadDemo={handleLoadDemo} isLoadingDemo={isLoadingDemo} />} />
             <Route

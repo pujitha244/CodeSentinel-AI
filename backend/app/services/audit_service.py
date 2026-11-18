@@ -131,6 +131,10 @@ class AuditService:
             log_stage(15, "Executing interprocedural taint propagation & chain analysis", 90)
             taint_engine = TaintEngine(root_dir, parsed_files, call_graph_data)
             vulnerability_chains = taint_engine.analyze()
+            audit_suffix = audit_id.removeprefix("audit-")
+            for chain in vulnerability_chains:
+                chain_index = chain["id"].rsplit("-", 1)[-1]
+                chain["id"] = f"CS-CHAIN-{audit_suffix}-{chain_index}"
 
             # Step 16: Correlation, Deduplication, and Risk Scoring
             log_stage(16, "Correlating findings & synthesizing parent vulnerability chains", 95)
@@ -140,7 +144,7 @@ class AuditService:
             )
 
             correlated_findings, score_report = FindingCorrelator.correlate_and_deduplicate(
-                all_raw_findings, vulnerability_chains
+                all_raw_findings, vulnerability_chains, audit_id=audit_id
             )
 
             # Save Vulnerability Chains to DB

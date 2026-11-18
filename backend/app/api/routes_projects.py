@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 
 from backend.app.core.database import get_db
+from backend.app.core.config import settings
 from backend.app.models.models import Project, Audit, VulnerabilityChain
 from backend.app.schemas.schemas import ProjectResponse, ProjectSummaryResponse, ArchitectureGraphResponse
 from backend.app.services.project_service import ProjectService
@@ -41,13 +42,18 @@ async def upload_project_zip(
     """
     Uploads and extracts a project ZIP archive.
     """
-    if not file.filename.endswith(".zip"):
+    if not file.filename or not file.filename.lower().endswith(".zip"):
         raise HTTPException(status_code=400, detail="Only .zip archives are supported.")
 
-    content = await file.read()
+    content = await file.read(settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024 + 1)
+    if len(content) > settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Upload exceeds the maximum size of {settings.MAX_UPLOAD_SIZE_MB}MB."
+        )
     try:
         proj_data = ProjectService.create_project_from_zip(content, file.filename)
-    except Exception as e:
+    except (ValueError, OSError) as e:
         raise HTTPException(status_code=400, detail=str(e))
 
     project = Project(
@@ -169,9 +175,21 @@ def get_project_architecture_graph(project_id: str, db: Session = Depends(get_db
 
 @router.get("/{project_id}/vulnerability-chains")
 def get_project_vulnerability_chains(project_id: str, db: Session = Depends(get_db)):
+    if not db.query(Project.id).filter(Project.id == project_id).first():
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    latest_audit = (
+        db.query(Audit)
+        .filter(Audit.project_id == project_id)
+        .order_by(Audit.created_at.desc())
+        .first()
+    )
+    if latest_audit is None:
+        return []
+
     chains = (
         db.query(VulnerabilityChain)
-        .filter(VulnerabilityChain.project_id == project_id)
+        .filter(VulnerabilityChain.audit_id == latest_audit.id)
         .all()
     )
     result = []

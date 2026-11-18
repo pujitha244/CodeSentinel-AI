@@ -1,95 +1,98 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  LayoutDashboard,
-  ShieldAlert,
-  GitMerge,
-  Sparkles,
-  Layers,
-  Wrench,
   Bot,
-  FileText,
-  Settings,
-  PlusCircle,
-  HelpCircle,
   Code2,
+  FileText,
+  GitMerge,
+  HelpCircle,
+  Home,
+  Layers,
+  LayoutDashboard,
   ListTodo,
   PackageSearch,
-  Home
+  PlusCircle,
+  Settings,
+  ShieldAlert,
+  Wrench
 } from 'lucide-react';
 
-export const Sidebar: React.FC = () => {
-  const navItems = [
-    { to: '/', label: 'Overview', icon: Home },
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/audit/new', label: 'New Audit', icon: PlusCircle, badge: 'Run' },
-    { 
-      to: '/chains', 
-      label: 'Vulnerability Chains', 
-      icon: GitMerge, 
-      highlight: true, 
-      badge: 'Flagship' 
-    },
-    { to: '/findings', label: 'Security Findings', icon: ShieldAlert },
-    { to: '/quality', label: 'Code Quality & Slop', icon: Code2 },
-    { to: '/logic-gaps', label: 'Logic Gaps & Boundaries', icon: HelpCircle },
-    { to: '/loose-ends', label: 'Loose Ends Tracker', icon: ListTodo },
-    { to: '/dependencies', label: 'Dependency Risks', icon: PackageSearch },
-    { to: '/architecture', label: 'Architecture Graph', icon: Layers },
-    { to: '/remediation', label: 'Safe Auto-Fix Lab', icon: Wrench, badge: 'Fix' },
-    { to: '/assistant', label: 'AI Security Assistant', icon: Bot },
-    { to: '/reports', label: 'Reports & Export', icon: FileText },
-    { to: '/settings', label: 'Settings', icon: Settings },
-  ];
+const groups = [
+  {
+    label: 'Workspace',
+    items: [
+      { to: '/', label: 'Overview', icon: Home },
+      { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { to: '/audit/new', label: 'New audit', icon: PlusCircle }
+    ]
+  },
+  {
+    label: 'Analysis',
+    items: [
+      { to: '/chains', label: 'Vulnerability chains', icon: GitMerge, flagship: true },
+      { to: '/findings', label: 'Security findings', icon: ShieldAlert },
+      { to: '/quality', label: 'Code quality', icon: Code2 },
+      { to: '/logic-gaps', label: 'Logic gaps', icon: HelpCircle },
+      { to: '/loose-ends', label: 'Loose ends', icon: ListTodo },
+      { to: '/dependencies', label: 'Dependencies', icon: PackageSearch },
+      { to: '/architecture', label: 'Architecture', icon: Layers }
+    ]
+  },
+  {
+    label: 'Tools',
+    items: [
+      { to: '/remediation', label: 'Remediation lab', icon: Wrench },
+      { to: '/assistant', label: 'Security assistant', icon: Bot },
+      { to: '/reports', label: 'Reports', icon: FileText },
+      { to: '/settings', label: 'Settings', icon: Settings }
+    ]
+  }
+];
 
-  return (
-    <aside className="w-64 border-r border-slate-800 bg-sentinel-950 flex flex-col justify-between p-4 min-h-[calc(100vh-4rem)]">
-      <div className="space-y-1">
-        <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-          Platform Navigation
-        </div>
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-150 ${
-                  isActive
-                    ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-sm'
-                    : item.highlight
-                    ? 'text-slate-200 hover:bg-rose-950/20 hover:text-rose-400 border border-rose-900/30 bg-rose-950/10'
-                    : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
-                }`
-              }
-            >
-              <div className="flex items-center gap-3">
-                <Icon className={`w-4 h-4 ${item.highlight ? 'text-rose-400 animate-pulse' : ''}`} />
-                <span>{item.label}</span>
-              </div>
-              {item.badge && (
-                <span
-                  className={`text-[9px] font-mono px-1.5 py-0.5 rounded uppercase font-bold ${
-                    item.badge === 'Flagship'
-                      ? 'bg-rose-900/80 text-rose-300 border border-rose-700/60'
-                      : 'bg-slate-800 text-slate-300'
-                  }`}
+export const Sidebar: React.FC = () => (
+  <aside className="sticky top-14 block h-[calc(100vh-3.5rem)] w-14 shrink-0 overflow-y-auto border-r border-slate-800 bg-sentinel-950 px-2 py-4 md:w-56">
+    <nav aria-label="Main navigation" className="space-y-5">
+      {groups.map((group) => (
+        <section key={group.label}>
+          <h2 className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-600 max-md:sr-only">
+            {group.label}
+          </h2>
+          <div className="space-y-0.5">
+            {group.items.map((item) => {
+              const Icon = item.icon;
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.to === '/'}
+                  title={item.label}
+                  aria-label={item.label}
+                  className={({ isActive }) =>
+                    `group flex min-h-9 items-center gap-2.5 border-l-2 px-2.5 text-xs transition-colors max-md:justify-center max-md:px-0 ${
+                      isActive
+                        ? 'border-cyan-500 bg-cyan-950/30 font-medium text-cyan-200'
+                        : 'border-transparent text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+                    }`
+                  }
                 >
-                  {item.badge}
-                </span>
-              )}
-            </NavLink>
-          );
-        })}
-      </div>
-
-      <div className="p-3 rounded-xl border border-slate-800/80 bg-slate-900/50 text-[11px] text-slate-400">
-        <div className="font-semibold text-slate-300 mb-1">Confidential Audit</div>
-        <p className="text-[10px] text-slate-500 leading-tight">
-          Isolated sandbox static analysis with AST verification. Untrusted code is never executed.
-        </p>
-      </div>
-    </aside>
-  );
-};
+                  <Icon
+                    className={`h-4 w-4 shrink-0 ${
+                      item.flagship ? 'text-cyan-400' : 'text-current opacity-80'
+                    }`}
+                    aria-hidden="true"
+                  />
+                  <span className="truncate max-md:sr-only">{item.label}</span>
+                  {item.flagship && (
+                    <span className="ml-auto text-[9px] font-medium uppercase tracking-wide text-cyan-500 max-md:hidden">
+                      Core
+                    </span>
+                  )}
+                </NavLink>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+    </nav>
+  </aside>
+);

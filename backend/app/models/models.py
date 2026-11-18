@@ -32,6 +32,14 @@ class Project(Base):
         self.meta_info = json.dumps(data)
 
 
+class AuthSession(Base):
+    __tablename__ = "auth_sessions"
+
+    id = Column(String, primary_key=True)
+    expires_at = Column(Integer, nullable=False)
+    revoked_at = Column(Integer, nullable=True)
+
+
 class Audit(Base):
     __tablename__ = "audits"
 
@@ -64,6 +72,20 @@ class Audit(Base):
     project = relationship("Project", back_populates="audits")
     findings = relationship("Finding", back_populates="audit", cascade="all, delete-orphan")
     vulnerability_chains = relationship("VulnerabilityChain", back_populates="audit", cascade="all, delete-orphan")
+
+    @property
+    def stages(self):
+        try:
+            return json.loads(self.stages_log or "[]")
+        except Exception:
+            return []
+
+    @property
+    def scanners(self):
+        try:
+            return json.loads(self.scanner_status or "{}")
+        except Exception:
+            return {}
 
 
 class Finding(Base):
@@ -127,6 +149,20 @@ class VulnerabilityChain(Base):
 
     audit = relationship("Audit", back_populates="vulnerability_chains")
     project = relationship("Project", back_populates="vulnerability_chains")
+
+    @property
+    def nodes(self):
+        try:
+            return json.loads(self.nodes_data or "[]")
+        except Exception:
+            return []
+
+    @property
+    def edges(self):
+        try:
+            return json.loads(self.edges_data or "[]")
+        except Exception:
+            return []
 
 
 class RemediationPatch(Base):

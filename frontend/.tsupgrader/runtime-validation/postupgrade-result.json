@@ -1,0 +1,111 @@
+{
+  "planHash": "cf8ad4087112013146e74229b670539060583d7f340d1025a266e80aae862f20",
+  "phase": "postupgrade",
+  "recordedAtUtc": "2026-11-18T11:57:18.4688662Z",
+  "retryCount": 0,
+  "resetBaseline": false,
+  "complete": true,
+  "result": {
+    "setupSucceeded": true,
+    "setupDurationMs": 38307,
+    "setupFailureOutput": null,
+    "assertions": [
+      {
+        "name": "typescript-production-build",
+        "kind": "process",
+        "verificationMethod": "exit-code",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": 0,
+        "outputSample": "\r\n\u003E codesentinel-ai-frontend@1.0.0 build\r\n\u003E tsc \u0026\u0026 vite build\r\n\r\n\u001B[36mvite v6.4.6 \u001B[32mbuilding for production...\u001B[36m\u001B[39m\r\ntransforming...\r\n\u001B[32m\u2713\u001B[39m 1548 modules transformed.\r\nrendering chunks...\r\ncomputing gzip size...\r\n\u001B[2mdist/\u001B[22m\u001B[32mindex.html                 \u001B[39m\u001B[1m\u001B[2m  1.20 kB\u001B[22m\u001B[1m\u001B[22m\u001B[2m \u2502 gzip:  0.73 kB\u001B[22m\r\n\u001B[2mdist/\u001B[22m\u001B[35massets/index-uIHoFWZB.css  \u001B[39m\u001B[1m\u001B[2m 56.41 kB\u001B[22m\u001B[1m\u001B[22m\u001B[2m \u2502 gzip: 10.62 kB\u001B[22m\r\n\u001B[2mdist/\u001B[22m\u001B[36massets/index-D0DAsd6y.js   \u001B[39m\u001B[1m\u001B[2m313.08 kB\u001B[22m\u001B[1m\u001B[22m\u001B[2m \u2502 gzip: 91.08 kB\u001B[22m\r\n\u001B[32m\u2713 built in 7.75s\u001B[39m\r\n",
+        "durationMs": 15340
+      },
+      {
+        "name": "frontend-route-tests",
+        "kind": "process",
+        "verificationMethod": "test-results",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": 0,
+        "outputSample": "\r\n\u003E codesentinel-ai-frontend@1.0.0 test\r\n\u003E node --test\r\n\r\nTAP version 13\r\n# Subtest: React Router resolves the primary application routes\r\nok 1 - React Router resolves the primary application routes\r\n  ---\r\n  duration_ms: 3.2832\r\n  type: \u0027test\u0027\r\n  ...\r\n# Subtest: React Router keeps route parameters available to dynamic routes\r\nok 2 - React Router keeps route parameters available to dynamic routes\r\n  ---\r\n  duration_ms: 0.3788\r\n  type: \u0027test\u0027\r\n  ...\r\n1..2\r\n# tests 2\r\n# suites 0\r\n# pass 2\r\n# fail 0\r\n# cancelled 0\r\n# skipped 0\r\n# todo 0\r\n# duration_ms 412.76\r\n",
+        "durationMs": 1515,
+        "testResults": {
+          "testFramework": "unknown",
+          "runnerDetectedFrom": "none",
+          "testsTotal": 0,
+          "testsPassed": 0,
+          "testsFailed": 0,
+          "testsSkipped": 0,
+          "parseFailed": true
+        }
+      },
+      {
+        "name": "vite-serves-home",
+        "kind": "http-probe",
+        "verificationMethod": "http-status",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": null,
+        "outputSample": "HTTP 200\n\u003C!DOCTYPE html\u003E\n\u003Chtml lang=\u0022en\u0022 class=\u0022dark\u0022\u003E\n  \u003Chead\u003E\n    \u003Cscript type=\u0022module\u0022\u003Eimport { injectIntoGlobalHook } from \u0022/@react-refresh\u0022;\ninjectIntoGlobalHook(window);\nwindow.$RefreshReg$ = () =\u003E {};\nwindow.$RefreshSig$ = () =\u003E (type) =\u003E type;\u003C/script\u003E\n\n    \u003Cscript type=\u0022module\u0022 src=\u0022/@vite/client\u0022\u003E\u003C/script\u003E\n\n    \u003Cmeta charset=\u0022UTF-8\u0022 /\u003E\n    \u003Clink rel=\u0022icon\u0022 type=\u0022image/svg\u002Bxml\u0022 href=\u0022data:image/svg\u002Bxml,\u003Csvg xmlns=\u0027http://www.w3.org/2000/svg\u0027 viewBox=\u00270 0 24 24\u0027 fill=\u0027%2338bdf8\u0027\u003E\u003Cpath d=\u0027M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5zm0 2.18l7 3.89v4.93c0 4.54-3.14 8.78-7 9.88-3.86-1.1-7-5.34-7-9.88V8.07l7-3.89z\u0027/\u003E\u003C/svg\u003E\u0022 /\u003E\n    \u003Cmeta name=\u0022viewport\u0022 content=\u0022width=device-width, initial-scale=1.0\u0022 /\u003E\n    \u003Ctitle\u003ECodeSentinel AI \u2014 Autonomous Security \u0026 Software Engineering Intelligence\u003C/title\u003E\n    \u003Clink rel=\u0022preconnect\u0022 href=\u0022https://fonts.googleapis.com\u0022\u003E\n    \u003Clink rel=\u0022preconnect\u0022 href=\u0022https://fonts.gstatic.com\u0022 crossorigin\u003E\n    \u003Clink href=\u0022https://fonts.googleapis.com/css2?family=Plus\u002BJakarta\u002BSans:wght@300;400;500;600;700;800\u0026family=JetBrains\u002BMono:wght@400;500;600\u0026display=swap\u0022 rel=\u0022stylesheet\u0022\u003E\n  \u003C/head\u003E\n  \u003Cbody class=\u0022bg-sentinel-950 text-slate-100 font-sans antialiased selection:bg-cyan-500 selection:text-black\u0022\u003E\n    \u003Cdiv id=\u0022root\u0022\u003E\u003C/div\u003E\n    \u003Cscript type=\u0022module\u0022 src=\u0022/src/main.tsx\u0022\u003E\u003C/script\u003E\n  \u003C/body\u003E\n\u003C/html\u003E\n\n--- server output ---\n\r\n\u003E codesentinel-ai-frontend@1.0.0 dev\r\n\u003E vite --host 127.0.0.1\r\n\r\n\r\n  \u001B[32m\u001B[1mVITE\u001B[22m v6.4.6\u001B[39m  \u001B[2mready in \u001B[0m\u001B[1m614\u001B[22m\u001B[2m\u001B[0m ms\u001B[22m\r\n\r\n  \u001B[32m\u279C\u001B[39m  \u001B[1mLocal\u001B[22m:   \u001B[36mhttp://127.0.0.1:\u001B[1m5173\u001B[22m/\u001B[39m\r\n",
+        "durationMs": 2525
+      }
+    ],
+    "executions": [
+      {
+        "source": "setup[0]",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npm.CMD",
+        "args": [
+          "ci"
+        ],
+        "cwd": "C:\\Users\\pooji\\Downloads\\CodeSentinel-AI\\frontend",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "typescript-production-build",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npm.CMD",
+        "args": [
+          "run",
+          "build"
+        ],
+        "cwd": "C:\\Users\\pooji\\Downloads\\CodeSentinel-AI\\frontend",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "frontend-route-tests",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npm.CMD",
+        "args": [
+          "test"
+        ],
+        "cwd": "C:\\Users\\pooji\\Downloads\\CodeSentinel-AI\\frontend",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "vite-serves-home",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npm.CMD",
+        "args": [
+          "run",
+          "dev",
+          "--",
+          "--host",
+          "127.0.0.1"
+        ],
+        "cwd": "C:\\Users\\pooji\\Downloads\\CodeSentinel-AI\\frontend",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      }
+    ]
+  }
+}

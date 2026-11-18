@@ -55,7 +55,13 @@ export const ArchitecturePage: React.FC<ArchitecturePageProps> = ({ currentProje
   }
 
   return (
-    <div className="py-6 px-6 max-w-7xl mx-auto flex flex-col gap-6">
+    <div className="page-frame py-6 px-6 max-w-7xl mx-auto flex flex-col gap-6">
+      <header>
+        <h1 className="text-2xl font-bold text-white tracking-tight">Repository Architecture</h1>
+        <p className="mt-1 text-xs text-slate-400">
+          Explore modules and the import or call relationships extracted from this project.
+        </p>
+      </header>
       <ArchitectureDependencyGraph graph={graph} />
     </div>
   );

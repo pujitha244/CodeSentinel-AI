@@ -96,10 +96,13 @@ python -m venv backend/venv
 # Linux/macOS
 source backend/venv/bin/activate
 
-pip install -r backend/requirements.txt
+python -m pip install --require-hashes -r backend/requirements.lock
+# Configure a random API_ACCESS_TOKEN (at least 32 characters) in the process environment or .env.
+# For local HTTP development only, set AUTH_COOKIE_SECURE=false.
 python -m uvicorn backend.app.main:app --reload --port 8000
 ```
 Backend API will be running at `http://127.0.0.1:8000` (Interactive Swagger docs at `http://127.0.0.1:8000/api/docs`).
+The website opens without an access-pin prompt. API authentication is disabled by default (`API_AUTH_ENABLED=false`) for local development. To protect the API when exposing it beyond your local machine, set `API_AUTH_ENABLED=true`, configure a random `API_ACCESS_TOKEN` of at least 32 characters, and use HTTPS with `AUTH_COOKIE_SECURE=true`. The optional token gate protects API routes; it is one shared identity, not per-user tenant isolation.
 
 #### 2. Frontend:
 ```bash
@@ -109,23 +112,33 @@ npm run dev
 ```
 Frontend interface will be running at `http://localhost:5173`.
 
+Generate a token without adding it to source control:
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+For protected deployments, set the generated value as `API_ACCESS_TOKEN` and `API_AUTH_ENABLED=true` in the backend environment or `.env`. An unset or short token fails closed: protected API routes return HTTP 503.
+
 ---
 
 ## 5. Automated Test Suite
 
-CodeSentinel AI includes an automated test suite verifying repository ingestion, AST extraction, taint propagation, patch synthesis, and report generation:
+Run the backend tests and frontend checks from the repository root:
 
 ```bash
 .\backend\venv\Scripts\python.exe -m pytest backend/tests -v
+cd frontend
+npm ci
+npm test
+npm run build
 ```
 
-All 6 test suites pass with 100% success:
-- `test_health_route` — API health check verification.
-- `test_routes_complete_lifecycle` — Complete audit lifecycle from project ingestion to report export.
-- `test_demo_project_creation` — Isolated demo workspace initialization.
-- `test_audit_execution_and_flagship_cross_file_chain` — Statically verifies the multi-file SQL injection propagation chain.
-- `test_remediation_preview_and_diff` — Verifies parameterized query patch generation and unified diff calculation.
-- `test_report_generation` — Verifies HTML, JSON, and Markdown report synthesis.
+`backend/requirements.txt` pins the direct Python dependencies; `backend/requirements.lock` pins the complete resolved graph with hashes for reproducible installs. Regenerate it after intentionally updating direct pins with `pip-compile --generate-hashes --output-file backend/requirements.lock backend/requirements.txt`.
+
+The backend tests cover API workflows, project ingestion, analysis, taint propagation, remediation, authentication, and reporting. Frontend tests exercise route matching; the production build runs the TypeScript compiler before producing the Vite bundle. Test results are environment-dependent; do not treat a successful build as evidence that every analysis capability is complete.
+
+Cross-file taint propagation is Python-focused. Supported evidence includes route-parameter sources, statically connected function calls with positional or named arguments, local aliases, tuple bindings, loop targets, and selected conditional assignments. A direct `shlex.quote(...)` use is recognized for command analysis; SQL/path sanitizer inference is not generalized. Conditional flow joins can retain taint after safe overwrites and produce false positives. Source/sink and call-graph matching are syntax-driven and can miss dynamic dispatch, complex control flow, wrappers, and unsupported expressions. JavaScript/TypeScript parsing is structural and does not provide cross-file taint guarantees. Confidence values are fixed heuristics, not probabilities. Results are static-analysis evidence, not formal verification.
+
+Dependency findings come from a small built-in advisory catalog and conservative version-constraint checks. This is not a live OSV feed, lockfile resolver, or complete dependency audit; confirm findings and resolved versions with a current package-audit tool.
 
 ---
 

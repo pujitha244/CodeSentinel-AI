@@ -17,6 +17,7 @@ export const AssistantPage: React.FC<AssistantPageProps> = ({ currentProject, la
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const quickPrompts = [
     "Explain the SQL injection vulnerability chain",
@@ -34,6 +35,7 @@ export const AssistantPage: React.FC<AssistantPageProps> = ({ currentProject, la
     setMessages(updatedMessages);
     setInput('');
     setLoading(true);
+    setError(null);
 
     try {
       const response = await api.chatWithAssistant(
@@ -50,15 +52,9 @@ export const AssistantPage: React.FC<AssistantPageProps> = ({ currentProject, la
           evidence_references: response.evidence_references
         }
       ]);
-      setLoading(false);
-    } catch (err: any) {
-      setMessages([
-        ...updatedMessages,
-        {
-          role: 'assistant',
-          content: "Sorry, I encountered an error communicating with the intelligence service."
-        }
-      ]);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'The assistant request failed.');
+    } finally {
       setLoading(false);
     }
   };
@@ -72,7 +68,7 @@ export const AssistantPage: React.FC<AssistantPageProps> = ({ currentProject, la
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-6rem)] max-w-5xl mx-auto py-4 px-6">
+    <div className="page-frame flex flex-col h-[calc(100vh-6rem)] max-w-5xl mx-auto py-4 px-6">
       {/* Header */}
       <div className="pb-4 border-b border-slate-800 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -162,6 +158,7 @@ export const AssistantPage: React.FC<AssistantPageProps> = ({ currentProject, la
       </div>
 
       {/* Input Form */}
+      {error && <p className="text-xs text-rose-300" role="alert">{error}</p>}
       <form
         onSubmit={(e) => {
           e.preventDefault();

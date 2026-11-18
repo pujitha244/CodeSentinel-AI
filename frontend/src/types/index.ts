@@ -73,6 +73,7 @@ export interface ChainNode {
     kind: 'source' | 'intermediate' | 'boundary' | 'sink';
     file: string;
     line: number;
+    snippet_start_line?: number;
     function?: string;
     snippet?: string;
     description?: string;
@@ -123,6 +124,8 @@ export interface RemediationPatch {
   original_code?: string;
   patched_code?: string;
   explanation: string;
+  has_changes: boolean;
+  is_already_applied: boolean;
   status: 'previewed' | 'applied' | 'verified' | 'rolled_back';
   verification_output?: string;
 }

@@ -4,6 +4,9 @@ echo   CodeSentinel AI - Autonomous Security Intelligence
 echo   Starting Backend & Frontend Development Servers
 echo ========================================================
 
+set AUTH_COOKIE_SECURE=false
+set API_AUTH_ENABLED=false
+
 start "CodeSentinel Backend" cmd /k ".\backend\venv\Scripts\python.exe -m uvicorn backend.app.main:app --reload --port 8000"
 start "CodeSentinel Frontend" cmd /k "cd frontend && npm run dev"
 

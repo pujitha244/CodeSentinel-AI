@@ -2,7 +2,7 @@
 
 ## 1. Executive Architectural Overview
 
-CodeSentinel AI is an autonomous, architecture-agnostic cybersecurity intelligence and software engineering audit platform. Unlike conventional static linters that produce disconnected line-level alerts, CodeSentinel AI models complete codebase topologies, correlates interprocedural taint flows, uncovers missing boundary conditions, and provides verified remediation.
+CodeSentinel AI is a static cybersecurity and software engineering audit platform. It models available codebase relationships, correlates supported Python interprocedural taint flows, uncovers selected boundary conditions, and can verify remediation with a targeted static re-scan.
 
 ```mermaid
 graph TD
@@ -114,5 +114,5 @@ Computes a transparent Code Slop score from 0–100 using documented deductions:
 
 - **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, Lucide React, Monaco Editor (`@monaco-editor/react`).
 - **Backend:** Python 3.10+, FastAPI, Pydantic v2, SQLAlchemy, SQLite (production ready for PostgreSQL).
-- **Security & Linters:** AST engine, Gitleaks pattern secret scanner, OSV CVE advisor catalog, optional Semgrep & Bandit CLI integration.
+- **Security & Linters:** AST engine, Gitleaks-pattern secret scanner, limited built-in dependency advisory catalog, and optional Semgrep & Bandit CLI integration.
 - **Reporting:** Standalone responsive HTML reports, JSON findings, GitHub Markdown summaries.

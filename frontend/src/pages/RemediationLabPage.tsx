@@ -112,7 +112,7 @@ export const RemediationLabPage: React.FC<RemediationLabPageProps> = ({ findings
   }
 
   return (
-    <div className="flex flex-col gap-6 py-6 px-6 max-w-7xl mx-auto">
+    <div className="page-frame flex flex-col gap-6 py-6 px-6 max-w-7xl mx-auto">
       {/* Header */}
       <div>
         <div className="flex items-center gap-2">
@@ -143,10 +143,11 @@ export const RemediationLabPage: React.FC<RemediationLabPageProps> = ({ findings
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Finding Selector & Overview */}
         <div className="rounded-2xl border border-slate-800 bg-sentinel-900/60 p-5 space-y-4">
-          <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
+          <label htmlFor="finding-to-remediate" className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
             Select Finding to Remediate
           </label>
           <select
+            id="finding-to-remediate"
             value={selectedFinding?.id}
             onChange={(e) => {
               setSelectedFindingId(e.target.value);
@@ -232,11 +233,17 @@ export const RemediationLabPage: React.FC<RemediationLabPageProps> = ({ findings
                   {currentPatch.status !== 'applied' && (
                     <button
                       onClick={handleApplyPatch}
-                      disabled={applying}
-                      className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 transition disabled:opacity-50"
+                      disabled={applying || !currentPatch.has_changes}
+                      className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 transition disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>{applying ? 'Applying...' : 'Approve & Apply Patch'}</span>
+                      <span>
+                        {applying
+                          ? 'Applying...'
+                          : currentPatch.has_changes
+                            ? 'Approve & Apply Patch'
+                            : 'No patch available'}
+                      </span>
                     </button>
                   )}
 
@@ -250,6 +257,12 @@ export const RemediationLabPage: React.FC<RemediationLabPageProps> = ({ findings
                   </button>
                 </div>
               </div>
+
+              {!currentPatch.has_changes && (
+                <p className="border border-amber-900/60 bg-amber-950/20 px-3 py-2 text-xs text-amber-200" role="status">
+                  No supported automatic patch is available for this finding. The source file has not been changed.
+                </p>
+              )}
 
               {/* Technical explanation */}
               <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 text-xs text-slate-300">

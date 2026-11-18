@@ -25,7 +25,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoadDemo, isLoadingD
   const differentiators = [
     {
       title: 'Cross-File Vulnerability Chains',
-      desc: 'Dedicated interprocedural taint analysis tracing untrusted inputs from API controllers across intermediate layers to dangerous database and system sinks.',
+      desc: 'Python-focused interprocedural taint analysis traces supported untrusted inputs across function calls to dynamic SQL and command expressions.',
       icon: GitMerge,
       badge: 'Flagship Intelligence',
       badgeColor: 'border-rose-800 bg-rose-950/70 text-rose-300'
@@ -48,7 +48,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoadDemo, isLoadingD
       title: 'Safe Auto-Fix Remediation Lab',
       desc: 'Preview evidence-backed unified diff patches with explicit user approval, isolated file application, automated static verification, and instant rollback.',
       icon: Wrench,
-      badge: 'Zero-Risk Remediation',
+      badge: 'Review-Gated Remediation',
       badgeColor: 'border-emerald-800 bg-emerald-950/70 text-emerald-300'
     }
   ];
@@ -61,25 +61,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoadDemo, isLoadingD
   ];
 
   return (
-    <div className="flex flex-col gap-16 py-8 px-4 max-w-6xl mx-auto">
+    <div className="page-frame flex flex-col gap-12 py-8 px-4 max-w-6xl mx-auto">
       {/* Hero Section */}
       <section className="text-center relative py-12">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-cyan-800/80 bg-cyan-950/40 text-cyan-300 text-xs font-mono font-semibold mb-6">
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Mycrobo 24-Hour Hackathon • SRM University-AP</span>
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-slate-700 bg-slate-900 text-slate-300 text-xs font-mono font-semibold mb-6">
+          <Shield className="w-3.5 h-3.5 text-cyan-400" />
+          <span>Repository security review</span>
         </div>
 
         <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-tight">
           Understand Your Code. <br className="hidden sm:inline" />
-          <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
+          <span className="text-cyan-300">
             Discover Hidden Risks.
           </span> <br className="hidden sm:inline" />
           Fix With Confidence.
         </h1>
 
         <p className="mt-6 text-base sm:text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
-          Autonomous, architecture-agnostic software security and code intelligence platform.
-          Extracts interprocedural vulnerability chains, hunts logic gaps, and delivers evidence-backed verified fixes.
+          Static security analysis and code intelligence for repository evidence.
+          Trace supported Python source-to-sink paths, inspect findings, and review targeted remediation before applying changes.
         </p>
 
         {/* Action CTAs */}
@@ -87,7 +87,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoadDemo, isLoadingD
           <button
             onClick={onLoadDemo}
             disabled={isLoadingDemo}
-            className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-bold text-sm shadow-xl shadow-cyan-600/25 transition disabled:opacity-50"
+            className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-lg border border-cyan-700 bg-cyan-800 hover:bg-cyan-700 text-white font-semibold text-sm transition disabled:opacity-50"
           >
             <Play className="w-4 h-4 fill-current" />
             <span>{isLoadingDemo ? 'Launching Demo...' : 'Try Flagship Demo Project'}</span>
@@ -108,13 +108,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoadDemo, isLoadingD
             <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Real Multi-Tier Python Demo
           </span>
           <span className="flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Statically Verified Taint Flow
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Static source-to-sink evidence
           </span>
           <span className="flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Zero Code Execution On Host
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" /> No execution of project code
           </span>
           <span className="flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Provider-Agnostic / Rule-Only
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Rule-based analysis
           </span>
         </div>
       </section>

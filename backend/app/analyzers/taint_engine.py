@@ -1,6 +1,7 @@
+import ast
 import re
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Set
 
 class TaintEngine:
     def __init__(self, project_root: str, parsed_files: Dict[str, Any], call_graph_data: Dict[str, Any]):
@@ -23,14 +24,24 @@ class TaintEngine:
         chain_counter = 1
         for source in sources:
             for sink in sinks:
-                # Find path in call graph from source['function_key'] to sink['function_key']
-                path = self._find_propagation_path(source["function_key"], sink["function_key"])
+                path = self._find_tainted_propagation_path(source, sink)
                 if path:
                     chain = self._construct_vulnerability_chain(
                         chain_id=f"CS-CHAIN-{chain_counter:04d}",
                         source=source,
                         sink=sink,
                         path=path
+                    )
+                    chains.append(chain)
+                    chain_counter += 1
+                elif source["function_key"] == sink["function_key"] and self._sink_reached(
+                    sink, set(source["tainted_params"])
+                ):
+                    chain = self._construct_vulnerability_chain(
+                        chain_id=f"CS-CHAIN-{chain_counter:04d}",
+                        source=source,
+                        sink=sink,
+                        path=[]
                     )
                     chains.append(chain)
                     chain_counter += 1
@@ -123,6 +134,7 @@ class TaintEngine:
                         "title": "SQL Injection in Raw Query Execution",
                         "snippet": snippet,
                         "sink_expression": line_text.strip(),
+                        "tainted_variables": sorted(self._expression_names(line_text)),
                         "description": "Constructs and executes an unparameterized SQL statement using dynamic string interpolation with untrusted input.",
                         "remediation": "Replace dynamic string interpolation with parameterized queries or an ORM."
                     })
@@ -140,6 +152,7 @@ class TaintEngine:
                         "title": "Path Traversal via Unvalidated File Access",
                         "snippet": snippet,
                         "sink_expression": line_text.strip(),
+                        "tainted_variables": sorted(self._expression_names(line_text)),
                         "description": "Accesses local filesystem resources using unvalidated user-controlled file paths.",
                         "remediation": "Validate paths against a strict whitelist and ensure target resides within canonical directory boundaries."
                     })
@@ -157,51 +170,199 @@ class TaintEngine:
                         "title": "OS Command Injection via Shell Execution",
                         "snippet": snippet,
                         "sink_expression": line_text.strip(),
+                        "tainted_variables": sorted(self._command_argument_names(line_text)),
                         "description": "Executes shell commands with user-supplied arguments without escaping.",
                         "remediation": "Avoid invoking shell commands with user input, or use parameterized argument lists without shell=True."
                     })
 
         return sinks
 
-    def _find_propagation_path(self, start_key: str, end_key: str) -> Optional[List[Dict[str, Any]]]:
+    def _find_tainted_propagation_path(
+        self, source: Dict[str, Any], sink: Dict[str, Any]
+    ) -> Optional[List[Dict[str, Any]]]:
         """
-        BFS path finding over directed call graph edges.
-        Returns the sequence of edge transitions from start_key to end_key.
+        Finds a call path only when tainted arguments reach each callee parameter.
         """
-        if start_key == end_key:
-            return []
-
-        queue = [[start_key]]
-        visited = {start_key}
-
+        start_key = source["function_key"]
+        end_key = sink["function_key"]
+        queue = [(start_key, set(source["tainted_params"]), [])]
+        visited = set()
         while queue:
-            current_path = queue.pop(0)
-            node = current_path[-1]
+            node, tainted_names, path = queue.pop(0)
+            state = (node, frozenset(tainted_names))
+            if state in visited:
+                continue
+            visited.add(state)
 
-            if node == end_key:
-                # Convert list of node keys to edge records
-                path_edges = []
-                for i in range(len(current_path) - 1):
-                    c_src = current_path[i]
-                    c_tgt = current_path[i+1]
-                    # Find matching edge
-                    matching_edge = next(
-                        (e for e in self.edges if e["caller_key"] == c_src and e["callee_key"] == c_tgt),
-                        None
-                    )
-                    if matching_edge:
-                        path_edges.append(matching_edge)
-                return path_edges
+            if node == end_key and path and self._sink_reached(sink, tainted_names):
+                return path
 
-            # Expand neighbors
             for edge in self.edges:
-                if edge["caller_key"] == node:
-                    neighbor = edge["callee_key"]
-                    if neighbor not in visited:
-                        visited.add(neighbor)
-                        queue.append(current_path + [neighbor])
+                if edge["caller_key"] != node:
+                    continue
+
+                caller_taint = self._tainted_variables_at(
+                    node, tainted_names, edge["line"], sink["vulnerability_type"]
+                )
+                callee_taint = self._tainted_callee_parameters(edge, caller_taint)
+                if not callee_taint:
+                    continue
+
+                next_path = path + [edge]
+                callee_key = edge["callee_key"]
+                if callee_key == end_key and self._sink_reached(sink, callee_taint):
+                    return next_path
+                queue.append((callee_key, callee_taint, next_path))
 
         return None
+
+    def _tainted_callee_parameters(
+        self, edge: Dict[str, Any], caller_taint: Set[str]
+    ) -> Set[str]:
+        callee = self.functions.get(edge["callee_key"], {})
+        params = [p for p in callee.get("params", []) if p not in {"self", "cls"}]
+        tainted = set()
+        positional_index = 0
+
+        for argument in edge.get("args", []):
+            keyword_match = re.match(r"^\s*([A-Za-z_]\w*)\s*=\s*(.+)$", argument)
+            if keyword_match:
+                param_name, expression = keyword_match.groups()
+                if param_name in params and self._expression_names(expression) & caller_taint:
+                    tainted.add(param_name)
+                continue
+
+            if positional_index < len(params) and self._expression_names(argument) & caller_taint:
+                tainted.add(params[positional_index])
+            positional_index += 1
+
+        return tainted
+
+    def _tainted_variables_at(
+        self,
+        function_key: str,
+        initial_taint: Set[str],
+        line: int,
+        vulnerability_type: Optional[str] = None,
+    ) -> Set[str]:
+        tainted = set(initial_taint)
+        function = self.functions.get(function_key, {})
+        assignments = sorted(
+            function.get("assignments", []), key=lambda assignment: assignment.get("line", 0)
+        )
+
+        for assignment in assignments:
+            if assignment.get("line", 0) > line:
+                break
+            bindings = assignment.get("bindings") or [
+                {"target": target, "value": assignment.get("value", "")}
+                for target in assignment.get("targets", [])
+            ]
+            for binding in bindings:
+                target_name = binding.get("target", "")
+                if not target_name:
+                    continue
+                is_sanitized = (
+                    vulnerability_type == "command_injection"
+                    and self._is_shell_quoted(binding.get("value", ""), tainted)
+                )
+                is_tainted = (
+                    not is_sanitized
+                    and bool(self._expression_names(binding.get("value", "")) & tainted)
+                )
+                if is_tainted:
+                    tainted.add(target_name)
+                elif not assignment.get("conditional", False):
+                    tainted.discard(target_name)
+
+        return tainted
+
+    def _sink_reached(self, sink: Dict[str, Any], tainted_names: Set[str]) -> bool:
+        sink_taint = self._tainted_variables_at(
+            sink["function_key"],
+            tainted_names,
+            sink["line"],
+            sink.get("vulnerability_type"),
+        )
+        expression_names = set(sink.get("tainted_variables", []))
+        return bool(expression_names & sink_taint)
+
+    @classmethod
+    def _is_shell_quoted(cls, expression: str, tainted_names: Set[str]) -> bool:
+        unquoted_names, has_quote = cls._shell_expression_facts(expression)
+        return has_quote and not (unquoted_names & tainted_names)
+
+    @classmethod
+    def _shell_expression_facts(cls, expression: str) -> tuple[Set[str], bool]:
+        try:
+            tree = ast.parse(expression, mode="eval")
+        except SyntaxError:
+            return cls._expression_names(expression), False
+
+        class ShellExpressionVisitor(ast.NodeVisitor):
+            def __init__(self):
+                self.names: Set[str] = set()
+                self.has_quote = False
+
+            def visit_Name(self, node: ast.Name):
+                self.names.add(node.id)
+
+            def visit_Call(self, node: ast.Call):
+                is_quote = (
+                    isinstance(node.func, ast.Attribute)
+                    and isinstance(node.func.value, ast.Name)
+                    and node.func.value.id == "shlex"
+                    and node.func.attr == "quote"
+                )
+                if is_quote:
+                    self.has_quote = True
+                    return
+                self.generic_visit(node)
+
+        visitor = ShellExpressionVisitor()
+        visitor.visit(tree)
+        return visitor.names, visitor.has_quote
+
+    @classmethod
+    def _command_argument_names(cls, expression: str) -> Set[str]:
+        expression = expression.strip()
+        try:
+            tree = ast.parse(expression)
+        except SyntaxError:
+            return cls._expression_names(expression)
+
+        names: Set[str] = set()
+        found_sink = False
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            function = node.func
+            is_dangerous = (
+                isinstance(function, ast.Name)
+                and function.id in {"exec", "eval"}
+            ) or (
+                isinstance(function, ast.Attribute)
+                and function.attr in {"system", "Popen", "run"}
+            )
+            if not is_dangerous:
+                continue
+            found_sink = True
+            values = [*node.args, *(keyword.value for keyword in node.keywords)]
+            for value in values:
+                unquoted_names, _ = cls._shell_expression_facts(ast.unparse(value))
+                names.update(unquoted_names)
+        return names if found_sink else cls._expression_names(expression)
+
+    @staticmethod
+    def _expression_names(expression: str) -> Set[str]:
+        try:
+            tree = ast.parse(expression, mode="eval")
+            return {
+                node.id for node in ast.walk(tree)
+                if isinstance(node, ast.Name)
+            }
+        except SyntaxError:
+            return set(re.findall(r"\b[A-Za-z_]\w*\b", expression))
 
     def _construct_vulnerability_chain(
         self, chain_id: str, source: Dict[str, Any], sink: Dict[str, Any], path: List[Dict[str, Any]]
@@ -223,6 +384,7 @@ class TaintEngine:
                 "kind": "source",
                 "file": source["file"],
                 "line": source["line"],
+                "snippet_start_line": source["line"],
                 "function": source["function"],
                 "snippet": source["snippet"],
                 "description": source["description"],
@@ -239,19 +401,18 @@ class TaintEngine:
         y_pos = 150
 
         # 2. Intermediate Propagation Nodes
-        for step_idx, step_edge in enumerate(path):
+        for step_edge in path:
             curr_node_id = f"node-{node_idx}"
             callee_func_data = self.functions.get(step_edge["callee_key"], {})
             callee_file = step_edge["callee_file"]
             callee_func = step_edge["callee_func"]
             line = callee_func_data.get("start_line", step_edge["line"])
             
-            snippet = self._get_snippet(callee_file, line, min(line + 4, callee_func_data.get("end_line", line + 4)))
-            
-            # Check if this node is the sink
+            # The sink is shown separately below at its actual evidence line.
             is_sink_node = (step_edge["callee_key"] == sink["function_key"])
 
             if not is_sink_node:
+                snippet = self._get_snippet(callee_file, line, min(line + 4, callee_func_data.get("end_line", line + 4)))
                 nodes.append({
                     "id": curr_node_id,
                     "type": "intermediateNode",
@@ -260,9 +421,10 @@ class TaintEngine:
                         "kind": "intermediate",
                         "file": callee_file,
                         "line": line,
+                        "snippet_start_line": line,
                         "function": callee_func,
                         "snippet": snippet,
-                        "description": f"Forwarded via '{step_edge['args']}' without sanitization into {callee_file}",
+                        "description": f"Tainted argument(s) {', '.join(step_edge['args'])} reach this function; sanitizer handling is limited.",
                         "is_tainted": True,
                         "badge": "INTERMEDIATE FLOW",
                         "badgeColor": "amber"
@@ -275,46 +437,16 @@ class TaintEngine:
                     "id": f"flow-e-{node_idx}",
                     "source": prev_node_id,
                     "target": curr_node_id,
-                    "label": f"calls ({', '.join(step_edge['args'])})",
+                    "label": f"passes ({', '.join(step_edge['args'])})",
                     "animated": True,
                     "type": "smoothstep",
-                    "style": {"stroke": "#f59e0b", "strokeWidth": 3}
+                    "style": {"stroke": "#f59e0b", "strokeWidth": 2}
                 })
                 prev_node_id = curr_node_id
                 x_pos += 260
                 node_idx += 1
 
-        # 3. Validation Boundary Node (highlighting missing validation)
-        boundary_node_id = f"node-{node_idx}"
-        nodes.append({
-            "id": boundary_node_id,
-            "type": "boundaryNode",
-            "data": {
-                "label": "Validation Boundary: MISSING",
-                "kind": "boundary",
-                "file": sink["file"],
-                "line": sink["line"] - 1,
-                "function": sink["function"],
-                "snippet": "# Missing input sanitization or parameterization",
-                "description": "No parameterization or input sanitization detected before sink execution.",
-                "is_tainted": True,
-                "badge": "UNVALIDATED BOUNDARY",
-                "badgeColor": "orange"
-            },
-            "position": {"x": x_pos, "y": y_pos - 80}
-        })
-        edges.append({
-            "id": f"flow-e-{node_idx}",
-            "source": prev_node_id,
-            "target": boundary_node_id,
-            "label": "no validation",
-            "animated": True,
-            "style": {"stroke": "#ea580c", "strokeDasharray": "4,4", "strokeWidth": 2}
-        })
-        node_idx += 1
-        x_pos += 240
-
-        # 4. Dangerous Sink Node
+        # 3. Dangerous Sink Node
         sink_node_id = f"node-{node_idx}"
         nodes.append({
             "id": sink_node_id,
@@ -324,6 +456,7 @@ class TaintEngine:
                 "kind": "sink",
                 "file": sink["file"],
                 "line": sink["line"],
+                "snippet_start_line": max(1, sink["line"] - 2),
                 "function": sink["function"],
                 "snippet": sink["snippet"],
                 "description": sink["description"],
@@ -333,17 +466,23 @@ class TaintEngine:
             },
             "position": {"x": x_pos, "y": y_pos}
         })
+        sink_call = path[-1] if path else None
         edges.append({
             "id": f"flow-e-{node_idx}",
-            "source": boundary_node_id,
+            "source": prev_node_id,
             "target": sink_node_id,
-            "label": "tainted sink reach",
+            "label": (
+                f"passes ({', '.join(sink_call['args'])})"
+                if sink_call else "same-function data flow"
+            ),
             "animated": True,
-            "style": {"stroke": "#ef4444", "strokeWidth": 3}
+            "style": {"stroke": "#ef4444", "strokeWidth": 2}
         })
 
-        # Calculate high confidence for statically verified complete chain
-        confidence = 0.94 if len(path) > 0 else 0.82
+        statically_bound = all(
+            edge.get("relationship_type") == "statically_verified" for edge in path
+        )
+        confidence = 0.94 if path and statically_bound else 0.86 if path else 0.88
 
         return {
             "id": chain_id,
@@ -355,7 +494,7 @@ class TaintEngine:
             "source_line": source["line"],
             "sink_file": sink["file"],
             "sink_line": sink["line"],
-            "description": f"Untrusted input originating from '{source['file']}:{source['line']}' propagates across {len(path) + 1} application layers and reaches the vulnerable operation in '{sink['file']}:{sink['line']}' without sanitization.",
+            "description": f"Untrusted input from '{source['file']}:{source['line']}' is passed through {len(path)} call transition(s) and appears in the dynamic expression at '{sink['file']}:{sink['line']}'.",
             "remediation_summary": sink["remediation"],
             "verified": True,
             "nodes": nodes,

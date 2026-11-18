@@ -17,7 +17,7 @@ export const LooseEndsPage: React.FC<LooseEndsPageProps> = ({ findings }) => {
   );
 
   return (
-    <div className="flex flex-col gap-6 py-6 px-6 max-w-7xl mx-auto">
+    <div className="page-frame flex flex-col gap-6 py-6 px-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>

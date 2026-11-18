@@ -1,0 +1,161 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.10.11, pytest-9.2.0, pluggy-1.7.0 -- C:\Users\pooji\Downloads\CodeSentinel-AI\backend\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\pooji\Downloads\CodeSentinel-AI
+plugins: anyio-4.16.0, asyncio-1.5.0
+asyncio: mode=strict, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 18 items
+
+backend/tests/test_cross_file_and_language.py::TestCrossFileChainDetection::test_P3_1_source_identification_routes_py PASSED [  5%]
+backend/tests/test_cross_file_and_language.py::TestCrossFileChainDetection::test_P3_2_dangerous_sink_in_database_py PASSED [ 11%]
+backend/tests/test_cross_file_and_language.py::TestCrossFileChainDetection::test_P3_3_vulnerability_type_is_sql_injection PASSED [ 16%]
+backend/tests/test_cross_file_and_language.py::TestCrossFileChainDetection::test_P3_4_confidence_above_85 PASSED [ 22%]
+backend/tests/test_cross_file_and_language.py::TestCrossFileChainDetection::test_P3_5_graph_nodes_cover_full_path PASSED [ 27%]
+backend/tests/test_cross_file_and_language.py::TestCrossFileChainDetection::test_P3_6_directed_edges_connect_nodes PASSED [ 33%]
+backend/tests/test_cross_file_and_language.py::TestCrossFileChainDetection::test_P3_7_chain_finding_link_to_correct_file PASSED [ 38%]
+backend/tests/test_cross_file_and_language.py::TestCrossFileChainDetection::test_P3_8_safe_dataflow_not_flagged PASSED [ 44%]
+backend/tests/test_cross_file_and_language.py::TestCrossFileChainDetection::test_P3_9_ast_extraction_function_calls_resolved PASSED [ 50%]
+backend/tests/test_cross_file_and_language.py::TestLanguageSupportPython::test_P4_py_1_ast_parses_classes_and_functions FAILED [ 55%]
+backend/tests/test_cross_file_and_language.py::TestLanguageSupportPython::test_P4_py_2_imports_resolved PASSED [ 61%]
+backend/tests/test_cross_file_and_language.py::TestLanguageSupportPython::test_P4_py_3_decorator_detection_for_route_sources FAILED [ 66%]
+backend/tests/test_cross_file_and_language.py::TestLanguageSupportPython::test_P4_py_4_taint_source_to_sink FAILED [ 72%]
+backend/tests/test_cross_file_and_language.py::TestLanguageSupportJavaScript::test_P4_js_1_ast_parses_functions FAILED [ 77%]
+backend/tests/test_cross_file_and_language.py::TestLanguageSupportJavaScript::test_P4_js_2_imports_resolved PASSED [ 83%]
+backend/tests/test_cross_file_and_language.py::TestLanguageSupportJavaScript::test_P4_js_3_template_literal_sql_flagged PASSED [ 88%]
+backend/tests/test_cross_file_and_language.py::TestLanguageSupportLimitations::test_LIMIT_1_java_not_analyzed PASSED [ 94%]
+backend/tests/test_cross_file_and_language.py::TestLanguageSupportLimitations::test_LIMIT_2_no_full_taint_for_js_cross_file FAILED [100%]
+
+================================== FAILURES ===================================
+___ TestLanguageSupportPython.test_P4_py_1_ast_parses_classes_and_functions ___
+
+self = <test_cross_file_and_language.TestLanguageSupportPython object at 0x0000016B645952A0>
+
+        def test_P4_py_1_ast_parses_classes_and_functions(self):
+            """P4-Py-1: Python AST engine extracts classes and functions correctly."""
+            code = """\
+    class DatabaseManager:
+        def find_user(self, uid: int):
+            import sqlite3
+            conn = sqlite3.connect("app.db")
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT * FROM users WHERE id = {uid}")
+            return cursor.fetchone()
+    
+        def safe_query(self, uid: int):
+            import sqlite3
+            conn = sqlite3.connect("app.db")
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM users WHERE id = ?", (uid,))
+            return cursor.fetchone()
+    """
+            result = CodeParser.parse_python("test.py", code)
+            assert len(result["functions"]) >= 2
+>           func_names = [f["name"] for f in result["functions"].values()]
+E           AttributeError: 'list' object has no attribute 'values'
+
+backend\tests\test_cross_file_and_language.py:188: AttributeError
+_ TestLanguageSupportPython.test_P4_py_3_decorator_detection_for_route_sources _
+
+self = <test_cross_file_and_language.TestLanguageSupportPython object at 0x0000016B64595840>
+
+        def test_P4_py_3_decorator_detection_for_route_sources(self):
+            """P4-Py-3: FastAPI route decorators are detected as untrusted sources."""
+            code = """\
+    from fastapi import APIRouter
+    router = APIRouter()
+    
+    @router.get("/search")
+    def search(q: str):
+        return db.query(q)
+    """
+            result = CodeParser.parse_python("routes.py", code)
+            funcs = result["functions"]
+>           route_funcs = [f for f in funcs.values() if any("get" in d.lower() or "post" in d.lower() for d in f.get("decorators", []))]
+E           AttributeError: 'list' object has no attribute 'values'
+
+backend\tests\test_cross_file_and_language.py:212: AttributeError
+_________ TestLanguageSupportPython.test_P4_py_4_taint_source_to_sink _________
+
+self = <test_cross_file_and_language.TestLanguageSupportPython object at 0x0000016B64595B10>
+
+        def test_P4_py_4_taint_source_to_sink(self):
+            """P4-Py-4: TaintEngine connects source endpoint to raw SQL sink."""
+            code_route = """\
+    from fastapi import APIRouter
+    router = APIRouter()
+    
+    @router.get("/search")
+    def search_endpoint(q: str = ""):
+        return service.do_search(q)
+    """
+            code_db = """\
+    import sqlite3
+    class DB:
+        def do_search(self, term: str):
+            conn = sqlite3.connect("app.db")
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT * FROM t WHERE name = '{term}'")
+            return cursor.fetchall()
+    """
+            parsed = {
+                "routes.py": CodeParser.parse_python("routes.py", code_route),
+                "database.py": CodeParser.parse_python("database.py", code_db),
+            }
+            builder = CallGraphBuilder("/tmp/test", parsed)
+            builder.build()
+>           cg = builder.call_graph_data
+E           AttributeError: 'CallGraphBuilder' object has no attribute 'call_graph_data'
+
+backend\tests\test_cross_file_and_language.py:240: AttributeError
+_______ TestLanguageSupportJavaScript.test_P4_js_1_ast_parses_functions _______
+
+self = <test_cross_file_and_language.TestLanguageSupportJavaScript object at 0x0000016B64595E10>
+
+        def test_P4_js_1_ast_parses_functions(self):
+            """P4-JS-1: JavaScript AST engine extracts functions."""
+            code = """\
+    const express = require('express');
+    const app = express();
+    
+    function getUserById(id) {
+        const query = `SELECT * FROM users WHERE id = ${id}`;
+        return db.query(query);
+    }
+    
+    const handleSearch = (req, res) => {
+        const q = req.query.search;
+        res.json(db.rawQuery(q));
+    };
+    """
+            result = CodeParser.parse_javascript("app.js", code)
+            assert len(result["functions"]) >= 1
+>           func_names = [f["name"] for f in result["functions"].values()]
+E           AttributeError: 'list' object has no attribute 'values'
+
+backend\tests\test_cross_file_and_language.py:271: AttributeError
+_ TestLanguageSupportLimitations.test_LIMIT_2_no_full_taint_for_js_cross_file _
+
+self = <test_cross_file_and_language.TestLanguageSupportLimitations object at 0x0000016B645969B0>
+
+    def test_LIMIT_2_no_full_taint_for_js_cross_file(self):
+        """LIMIT-2: Cross-file JS taint chains are not fully resolved (documented limitation)."""
+        # This test documents the known limitation - JS cross-file is structural only
+        js_code_route = "app.get('/search', (req, res) => { search(req.query.q); });\n"
+        js_code_db = "function search(term) { db.query(`SELECT * WHERE name='${term}'`); }\n"
+        parsed = {
+            "routes.js": CodeParser.parse_javascript("routes.js", js_code_route),
+            "db.js": CodeParser.parse_javascript("db.js", js_code_db),
+        }
+        builder = CallGraphBuilder("/tmp/js_test", parsed)
+        builder.build()
+>       cg = builder.call_graph_data
+E       AttributeError: 'CallGraphBuilder' object has no attribute 'call_graph_data'
+
+backend\tests\test_cross_file_and_language.py:343: AttributeError
+=========================== short test summary info ===========================
+FAILED backend/tests/test_cross_file_and_language.py::TestLanguageSupportPython::test_P4_py_1_ast_parses_classes_and_functions
+FAILED backend/tests/test_cross_file_and_language.py::TestLanguageSupportPython::test_P4_py_3_decorator_detection_for_route_sources
+FAILED backend/tests/test_cross_file_and_language.py::TestLanguageSupportPython::test_P4_py_4_taint_source_to_sink
+FAILED backend/tests/test_cross_file_and_language.py::TestLanguageSupportJavaScript::test_P4_js_1_ast_parses_functions
+FAILED backend/tests/test_cross_file_and_language.py::TestLanguageSupportLimitations::test_LIMIT_2_no_full_taint_for_js_cross_file
+======================== 5 failed, 13 passed in 1.74s =========================

@@ -11,7 +11,7 @@ export const LogicGapsPage: React.FC<LogicGapsPageProps> = ({ findings }) => {
   const gaps = findings.filter(f => f.category === 'logic_gap');
 
   return (
-    <div className="flex flex-col gap-6 py-6 px-6 max-w-7xl mx-auto">
+    <div className="page-frame flex flex-col gap-6 py-6 px-6 max-w-7xl mx-auto">
       {/* Header */}
       <div>
         <div className="flex items-center gap-2">

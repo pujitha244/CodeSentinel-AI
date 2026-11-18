@@ -1,8 +1,10 @@
 import os
 from pathlib import Path
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="allow")
+
     PROJECT_NAME: str = "CodeSentinel AI"
     VERSION: str = "1.0.0"
     API_PREFIX: str = "/api"
@@ -22,6 +24,9 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_MB: int = 50
     MAX_FILE_COUNT: int = 5000
     MAX_FILE_SIZE_KB: int = 2048
+    API_AUTH_ENABLED: bool = False
+    API_ACCESS_TOKEN: str = ""
+    AUTH_COOKIE_SECURE: bool = True
     ALLOWED_EXTENSIONS: set = {
         ".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".c", ".cpp", ".go",
         ".json", ".yaml", ".yml", ".toml", ".sh", ".dockerfile", "dockerfile",
@@ -42,10 +47,6 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:8000"
     ]
-
-    class Config:
-        env_file = ".env"
-        extra = "allow"
 
 settings = Settings()
 

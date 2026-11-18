@@ -1,6 +1,7 @@
+import json
 from datetime import datetime
 from typing import List, Dict, Any, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 # --- Project Schemas ---
 class ProjectBase(BaseModel):
@@ -19,8 +20,19 @@ class ProjectResponse(ProjectBase):
     created_at: datetime
     meta_info: Dict[str, Any] = {}
 
-    class Config:
-        from_attributes = True
+    @field_validator("meta_info", mode="before")
+    @classmethod
+    def parse_meta_info(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except Exception:
+                return {}
+        elif isinstance(v, dict):
+            return v
+        return {}
+
+    model_config = ConfigDict(from_attributes=True)
 
 class ProjectSummaryResponse(BaseModel):
     id: str
@@ -54,8 +66,7 @@ class FindingResponse(BaseModel):
     chain_id: Optional[str] = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # --- Vulnerability Chain Schemas ---
 class ChainNode(BaseModel):
@@ -93,9 +104,35 @@ class VulnerabilityChainResponse(BaseModel):
     description: str
     remediation_summary: str
     verified: bool
-    nodes: List[Dict[str, Any]]
-    edges: List[Dict[str, Any]]
+    nodes: List[Dict[str, Any]] = []
+    edges: List[Dict[str, Any]] = []
     created_at: datetime
+
+    @field_validator("nodes", mode="before")
+    @classmethod
+    def parse_nodes(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except Exception:
+                return []
+        elif isinstance(v, list):
+            return v
+        return []
+
+    @field_validator("edges", mode="before")
+    @classmethod
+    def parse_edges(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except Exception:
+                return []
+        elif isinstance(v, list):
+            return v
+        return []
+
+    model_config = ConfigDict(from_attributes=True)
 
 # --- Audit Schemas ---
 class AuditCreate(BaseModel):
@@ -122,6 +159,32 @@ class AuditResponse(BaseModel):
     scanner_status: Dict[str, Any] = {}
     created_at: datetime
     completed_at: Optional[datetime] = None
+
+    @field_validator("stages_log", mode="before")
+    @classmethod
+    def parse_stages_log(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except Exception:
+                return []
+        elif isinstance(v, list):
+            return v
+        return []
+
+    @field_validator("scanner_status", mode="before")
+    @classmethod
+    def parse_scanner_status(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except Exception:
+                return {}
+        elif isinstance(v, dict):
+            return v
+        return {}
+
+    model_config = ConfigDict(from_attributes=True)
 
 # --- Remediation Schemas ---
 class RemediationPreviewRequest(BaseModel):

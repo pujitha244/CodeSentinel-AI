@@ -39,6 +39,7 @@ class PythonASTVisitor(ast.NodeVisitor):
         self.current_function: Optional[FunctionInfo] = None
         self.current_class: Optional[str] = None
         self.raw_calls: List[Dict[str, Any]] = []
+        self.conditional_depth = 0
 
     def visit_Import(self, node: ast.Import):
         for alias in node.names:
@@ -106,7 +107,9 @@ class PythonASTVisitor(ast.NodeVisitor):
         )
         
         prev_func = self.current_function
+        prev_conditional_depth = self.conditional_depth
         self.current_function = func_info
+        self.conditional_depth = 0
         
         # Visit child statements to collect calls and assignments
         for item in node.body:
@@ -117,6 +120,7 @@ class PythonASTVisitor(ast.NodeVisitor):
             self.classes[-1]["methods"].append(func_name)
             
         self.current_function = prev_func
+        self.conditional_depth = prev_conditional_depth
 
     def visit_Call(self, node: ast.Call):
         func_name = ""
@@ -137,6 +141,14 @@ class PythonASTVisitor(ast.NodeVisitor):
                 args_repr.append(ast.unparse(a))
             else:
                 args_repr.append(type(a).__name__)
+        for keyword in node.keywords:
+            if hasattr(ast, "unparse"):
+                keyword_name = keyword.arg or ""
+                args_repr.append(
+                    f"{keyword_name}={ast.unparse(keyword.value)}"
+                    if keyword_name
+                    else ast.unparse(keyword.value)
+                )
 
         call_data = {
             "name": func_name,
@@ -164,12 +176,109 @@ class PythonASTVisitor(ast.NodeVisitor):
         assignment_data = {
             "targets": targets,
             "value": value_repr,
-            "line": node.lineno
+            "line": node.lineno,
+            "conditional": self.conditional_depth > 0,
+            "bindings": [
+                binding
+                for target in node.targets
+                for binding in self._assignment_bindings(target, node.value)
+            ]
         }
         
         if self.current_function:
             self.current_function.assignments.append(assignment_data)
             
+        self.generic_visit(node)
+
+    def visit_AnnAssign(self, node: ast.AnnAssign):
+        if self.current_function and node.value is not None:
+            target = ast.unparse(node.target)
+            value = ast.unparse(node.value)
+            self.current_function.assignments.append({
+                "targets": [target],
+                "value": value,
+                "line": node.lineno,
+                "conditional": self.conditional_depth > 0,
+                "bindings": self._assignment_bindings(node.target, node.value)
+            })
+        self.generic_visit(node)
+
+    def visit_AugAssign(self, node: ast.AugAssign):
+        if self.current_function:
+            target = ast.unparse(node.target)
+            value = f"{target} + ({ast.unparse(node.value)})"
+            self.current_function.assignments.append({
+                "targets": [target],
+                "value": value,
+                "line": node.lineno,
+                "conditional": self.conditional_depth > 0,
+                "bindings": [{"target": target, "value": value}]
+            })
+        self.generic_visit(node)
+
+    def visit_If(self, node: ast.If):
+        self.visit(node.test)
+        self._visit_conditional_block(node.body)
+        self._visit_conditional_block(node.orelse)
+
+    def visit_For(self, node: ast.For):
+        self.visit(node.iter)
+        if self.current_function:
+            target = ast.unparse(node.target)
+            value = ast.unparse(node.iter)
+            self.current_function.assignments.append({
+                "targets": [target],
+                "value": value,
+                "line": node.lineno,
+                "conditional": True,
+                "bindings": self._assignment_bindings(node.target, node.iter)
+            })
+        self._visit_conditional_block(node.body)
+        self._visit_conditional_block(node.orelse)
+
+    visit_AsyncFor = visit_For
+
+    def visit_While(self, node: ast.While):
+        self.visit(node.test)
+        self._visit_conditional_block(node.body)
+        self._visit_conditional_block(node.orelse)
+
+    def visit_Try(self, node: ast.Try):
+        self._visit_conditional_block(node.body)
+        for handler in node.handlers:
+            self._visit_conditional_block(handler.body)
+        self._visit_conditional_block(node.orelse)
+        self._visit_conditional_block(node.finalbody)
+
+    def _visit_conditional_block(self, statements):
+        self.conditional_depth += 1
+        try:
+            for statement in statements:
+                self.visit(statement)
+        finally:
+            self.conditional_depth -= 1
+
+    def _assignment_bindings(self, target, value):
+        if isinstance(target, (ast.Tuple, ast.List)) and isinstance(value, (ast.Tuple, ast.List)):
+            bindings = []
+            for target_item, value_item in zip(target.elts, value.elts):
+                bindings.extend(self._assignment_bindings(target_item, value_item))
+            return bindings
+        if isinstance(target, ast.Name):
+            return [{"target": target.id, "value": ast.unparse(value)}]
+        return []
+
+    def visit_NamedExpr(self, node: ast.NamedExpr):
+        if self.current_function:
+            target = ast.unparse(node.target)
+            value = ast.unparse(node.value)
+            self.current_function.assignments.append({
+                "targets": [target],
+                "value": value,
+                "line": node.lineno,
+                "conditional": self.conditional_depth > 0,
+                "bindings": self._assignment_bindings(node.target, node.value)
+            })
         self.generic_visit(node)
 
 

@@ -11,12 +11,12 @@ export const DependenciesPage: React.FC<DependenciesPageProps> = ({ findings }) 
   const depFindings = findings.filter(f => f.category === 'dependency');
 
   return (
-    <div className="flex flex-col gap-6 py-6 px-6 max-w-7xl mx-auto">
+    <div className="page-frame flex flex-col gap-6 py-6 px-6 max-w-7xl mx-auto">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-white tracking-tight">Dependency Security & CVE Advisories</h1>
         <p className="text-xs text-slate-400 mt-1">
-          Analyzes third-party manifest files (requirements.txt, package.json) against publicly disclosed CVE advisories.
+          Checks supported manifest constraints against a small built-in advisory catalog; it is not a live feed or complete lockfile audit.
         </p>
       </div>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArchitectureGraph } from '../../types';
 import { FileCode, Layers, GitBranch, Search, Filter } from 'lucide-react';
 
@@ -12,7 +12,11 @@ export const ArchitectureDependencyGraph: React.FC<ArchitectureDependencyGraphPr
   onSelectFile
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedNode, setSelectedNode] = useState<any>(null);
+  const [selectedNode, setSelectedNode] = useState<ArchitectureGraph['nodes'][number] | null>(graph.nodes[0] || null);
+
+  useEffect(() => {
+    setSelectedNode(graph.nodes[0] || null);
+  }, [graph]);
 
   const filteredNodes = graph.nodes.filter(n => 
     n.data.label.toLowerCase().includes(searchTerm.toLowerCase())
@@ -23,10 +27,10 @@ export const ArchitectureDependencyGraph: React.FC<ArchitectureDependencyGraphPr
       {/* Header & Controls */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+          <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
             <Layers className="w-5 h-5 text-indigo-400" />
-            Repository Intelligence & Dependency Architecture
-          </h3>
+            Module relationships
+          </h2>
           <p className="text-xs text-slate-400 mt-1">
             Visual structural graph extracted statically from repository source files, imports, and inter-file calls.
           </p>
@@ -62,15 +66,18 @@ export const ArchitectureDependencyGraph: React.FC<ArchitectureDependencyGraphPr
           const incoming = graph.edges.filter(e => e.target === node.id);
 
           return (
-            <div
+            <button
+              type="button"
+              aria-pressed={isSelected}
+              aria-label={`Inspect module ${label}`}
               key={node.id}
               onClick={() => {
                 setSelectedNode(node);
                 if (onSelectFile) onSelectFile(label);
               }}
-              className={`cursor-pointer rounded-xl border p-4 transition-all duration-200 bg-slate-900/80 hover:bg-slate-900 ${
+              className={`w-full text-left rounded-lg border p-4 transition-colors bg-slate-900/80 hover:bg-slate-900 ${
                 isSelected 
-                  ? 'border-indigo-500 ring-2 ring-indigo-500/30' 
+                  ? 'border-indigo-500 ring-1 ring-indigo-500/30'
                   : 'border-slate-800 hover:border-slate-700'
               }`}
             >
@@ -93,9 +100,14 @@ export const ArchitectureDependencyGraph: React.FC<ArchitectureDependencyGraphPr
                   <span className="text-emerald-400">↓ {incoming.length} in</span>
                 </div>
               </div>
-            </div>
+            </button>
           );
         })}
+        {filteredNodes.length === 0 && (
+          <p className="col-span-full py-8 text-center text-xs text-slate-500" role="status">
+            No modules match this search.
+          </p>
+        )}
       </div>
 
       {/* Selected Node Connections Panel */}

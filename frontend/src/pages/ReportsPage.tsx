@@ -12,6 +12,8 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ currentProject, latest
   const [copied, setCopied] = useState(false);
   const [markdownContent, setMarkdownContent] = useState<string>('');
   const [loadingMarkdown, setLoadingMarkdown] = useState(false);
+  const [exportingJson, setExportingJson] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!latestAudit || !currentProject) {
     return (
@@ -23,36 +25,51 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ currentProject, latest
 
   const handleFetchMarkdown = async () => {
     setLoadingMarkdown(true);
+    setError(null);
     try {
       const text = await api.getReportMarkdown(latestAudit.id);
       setMarkdownContent(text);
-      setLoadingMarkdown(false);
-    } catch {
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Markdown report could not be loaded.');
+    } finally {
       setLoadingMarkdown(false);
     }
   };
 
   const handleDownloadJson = async () => {
-    const data = await api.getReportJson(latestAudit.id);
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `codesentinel-report-${latestAudit.id}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    setExportingJson(true);
+    setError(null);
+    try {
+      const data = await api.getReportJson(latestAudit.id);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `codesentinel-report-${latestAudit.id}.json`;
+      a.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'JSON report could not be exported.');
+    } finally {
+      setExportingJson(false);
+    }
   };
 
-  const handleCopyMarkdown = () => {
-    navigator.clipboard.writeText(markdownContent);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopyMarkdown = async () => {
+    setError(null);
+    try {
+      await navigator.clipboard.writeText(markdownContent);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch (copyError: unknown) {
+      setError(copyError instanceof Error ? copyError.message : 'Clipboard access was denied.');
+    }
   };
 
   const htmlUrl = api.getReportHtmlUrl(latestAudit.id);
 
   return (
-    <div className="flex flex-col gap-6 py-6 px-6 max-w-7xl mx-auto">
+    <div className="page-frame flex flex-col gap-6 py-6 px-6 max-w-7xl mx-auto">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-white tracking-tight">Audit Reports & Export</h1>
@@ -60,6 +77,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ currentProject, latest
           Export confidential security findings, cross-file vulnerability investigations, and engineering health scorecards.
         </p>
       </div>
+      {error && <p className="border border-rose-900/70 bg-rose-950/30 px-3 py-2 text-xs text-rose-200" role="alert">{error}</p>}
 
       {/* Export Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -103,10 +121,11 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ currentProject, latest
           <div className="mt-6 flex items-center gap-2">
             <button
               onClick={handleDownloadJson}
-              className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition"
+              disabled={exportingJson}
+              className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition disabled:opacity-60"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Download JSON</span>
+              <span>{exportingJson ? 'Preparing export…' : 'Download JSON'}</span>
             </button>
           </div>
         </div>

@@ -75,12 +75,61 @@ def test_audit_execution_and_flagship_cross_file_chain(db_session):
     loose_findings = [f for f in findings if f.category == "loose_end"]
     assert len(loose_findings) >= 1
 
+
+def test_finding_and_chain_ids_are_unique_across_audits(db_session):
+    proj_data = ProjectService.create_project_from_demo()
+    project = Project(
+        id=proj_data["id"],
+        name=proj_data["name"],
+        description=proj_data["description"],
+        source_type=proj_data["source_type"],
+        source_url=proj_data["source_url"],
+        root_path=proj_data["root_path"],
+        meta_info=str(proj_data["meta_info"])
+    )
+    db_session.add(project)
+    db_session.commit()
+    service = AuditService(db_session)
+
+    first_audit = service.run_audit(project.id)
+    second_audit = service.run_audit(project.id)
+    first_findings = {
+        finding.id for finding in db_session.query(Finding)
+        .filter(Finding.audit_id == first_audit.id)
+    }
+    second_findings = {
+        finding.id for finding in db_session.query(Finding)
+        .filter(Finding.audit_id == second_audit.id)
+    }
+    first_chains = {
+        chain.id for chain in db_session.query(VulnerabilityChain)
+        .filter(VulnerabilityChain.audit_id == first_audit.id)
+    }
+    second_chains = {
+        chain.id for chain in db_session.query(VulnerabilityChain)
+        .filter(VulnerabilityChain.audit_id == second_audit.id)
+    }
+
+    assert first_findings.isdisjoint(second_findings)
+    assert first_chains.isdisjoint(second_chains)
+
 def test_remediation_preview_and_diff(db_session):
-    project = db_session.query(Project).filter(Project.source_type == "demo").first()
-    assert project is not None
+    proj_data = ProjectService.create_project_from_demo()
+    project = Project(
+        id=proj_data["id"],
+        name=proj_data["name"],
+        description=proj_data["description"],
+        source_type=proj_data["source_type"],
+        source_url=proj_data["source_url"],
+        root_path=proj_data["root_path"],
+        meta_info=str(proj_data["meta_info"])
+    )
+    db_session.add(project)
+    db_session.commit()
+    audit = AuditService(db_session).run_audit(project.id)
 
     finding = db_session.query(Finding).filter(
-        Finding.project_id == project.id,
+        Finding.audit_id == audit.id,
         Finding.title.ilike("%sql%")
     ).first()
     assert finding is not None
