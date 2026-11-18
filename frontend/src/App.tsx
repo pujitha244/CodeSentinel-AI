@@ -18,6 +18,7 @@ import { RemediationLabPage } from './pages/RemediationLabPage';
 import { AssistantPage } from './pages/AssistantPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { SignInPage } from './pages/SignInPage';
 
 function AppContent() {
   const navigate = useNavigate();
@@ -29,9 +30,28 @@ function AppContent() {
   const [isLoadingDemo, setIsLoadingDemo] = useState(false);
   const [isSwitchingProject, setIsSwitchingProject] = useState(false);
   const [appError, setAppError] = useState<string | null>(null);
+  const [authState, setAuthState] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
+  const [authConfigured, setAuthConfigured] = useState<boolean | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadInitialData();
+    let active = true;
+    api.getAuthSession()
+      .then(async (session) => {
+        if (!active) return;
+        setAuthConfigured(session.configured);
+        setAuthState(session.authenticated ? 'authenticated' : 'unauthenticated');
+        if (session.authenticated) await loadInitialData();
+      })
+      .catch((err: unknown) => {
+        if (active) {
+          setAuthState('unauthenticated');
+          setAuthError(err instanceof Error ? err.message : 'Unable to check authentication status.');
+        }
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const loadInitialData = async () => {
@@ -125,6 +145,47 @@ function AppContent() {
     }
   };
 
+  const handleSignIn = async (token: string) => {
+    await api.createAuthSession(token);
+    setAuthError(null);
+    setAuthConfigured(true);
+    setAuthState('authenticated');
+    await loadInitialData();
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await api.deleteAuthSession();
+      setProjects([]);
+      setCurrentProject(null);
+      setLatestAudit(null);
+      setFindings([]);
+      setChains([]);
+      setAuthState('unauthenticated');
+      setAppError(null);
+    } catch (err) {
+      setAppError(err instanceof Error ? err.message : 'Unable to end the current session.');
+    }
+  };
+
+  if (authState === 'loading') {
+    return (
+      <main className="min-h-screen flex items-center justify-center text-sm text-slate-400" role="status">
+        Checking workspace session…
+      </main>
+    );
+  }
+
+  if (authState !== 'authenticated') {
+    return (
+      <SignInPage
+        configured={authConfigured}
+        initialError={authError}
+        onSignIn={handleSignIn}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-sentinel-950 text-slate-100 flex flex-col">
       <Navbar
@@ -132,6 +193,7 @@ function AppContent() {
         projects={projects}
         onSelectProject={(projectId) => handleSelectProject(projectId)}
         onLoadDemo={handleLoadDemo}
+        onSignOut={authConfigured ? handleSignOut : undefined}
         isLoadingDemo={isLoadingDemo}
       />
       

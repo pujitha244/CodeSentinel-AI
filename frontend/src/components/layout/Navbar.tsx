@@ -1,5 +1,5 @@
 import React from 'react';
-import { FolderGit2, Play, Shield } from 'lucide-react';
+import { FolderGit2, LogOut, Play, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Project } from '../../types';
 
@@ -8,6 +8,7 @@ interface NavbarProps {
   projects: Project[];
   onSelectProject: (projectId: string) => void;
   onLoadDemo: () => void;
+  onSignOut?: () => void;
   isLoadingDemo?: boolean;
 }
 
@@ -16,6 +17,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   projects,
   onSelectProject,
   onLoadDemo,
+  onSignOut,
   isLoadingDemo = false
 }) => (
   <header className="sticky top-0 z-40 w-full border-b border-slate-800 bg-sentinel-950">
@@ -47,6 +49,17 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
+        {onSignOut && (
+          <button
+            type="button"
+            onClick={onSignOut}
+            className="inline-flex items-center gap-2 border border-slate-700 px-3 py-2 text-xs font-medium text-slate-300 transition hover:border-slate-500 hover:bg-slate-900"
+            aria-label="Sign out"
+          >
+            <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="hidden sm:inline">Sign out</span>
+          </button>
+        )}
         <button
           type="button"
           onClick={onLoadDemo}
