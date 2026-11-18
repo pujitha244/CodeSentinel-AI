@@ -8,6 +8,6 @@ This project is a multi-tier Python application designed to demonstrate static a
 - `backend/routes.py`: API endpoint receiving untrusted `q` parameter without sanitization.
 - `backend/services.py`: Intermediate service layer forwarding search keyword.
 - `backend/database.py`: Dangerous sink executing raw string-concatenated SQL queries.
-- `backend/config.py`: Configuration file with hardcoded credentials and secret keys.
+- `backend/config.py`: Configuration file that reads credentials from environment variables; no credentials are committed.
 - `middleware/auth.py`: Authentication middleware with logic bypass edge cases.
 - `utils/helpers.py`: Loose ends (TODO, FIXME, pass, NotImplementedError).

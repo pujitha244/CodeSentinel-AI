@@ -158,13 +158,13 @@ class TestRemediationIntegrity:
         assert len(raw_sql_findings) == 0, \
             f"Patched file must NOT trigger f-string SQL injection scanner: {raw_sql_findings}"
 
-    def test_6_unrelated_vulnerabilities_still_detected(self, fresh_demo, db):
-        """Step 6: Patching database.py does not affect detection of config.py secrets."""
+    def test_6_demo_config_does_not_contain_committed_secrets(self, fresh_demo, db):
+        """Step 6: Demo credentials come from the environment, not committed literals."""
         project, audit = fresh_demo
         secret_scanner = SecretScanner()
         findings = secret_scanner.scan(project.root_path, ["backend/config.py"])
-        assert len(findings) >= 3, \
-            f"Secret scanner must still detect AWS keys and JWT tokens in config.py, got: {findings}"
+        assert findings == [], \
+            f"Demo config must not contain hardcoded credentials, got: {findings}"
 
     def test_7_rollback_restores_original_vulnerable_code(self, fresh_demo, db):
         """Step 7: Rollback restores the original vulnerable file."""

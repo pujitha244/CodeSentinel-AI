@@ -62,7 +62,7 @@ The repository includes a multi-tier Python project (`sample-projects/vulnerable
 - `backend/routes.py`: Controller accepts parameter `q` without validation.
 - `backend/services.py`: Intermediate service forwards parameter to database layer.
 - `backend/database.py`: Dangerous sink executes raw SQL query with unescaped f-string interpolation (`cursor.execute(f"SELECT ... {search_term}")`).
-- `backend/config.py`: Hardcoded AWS credentials and JWT secret key.
+- `backend/config.py`: Environment-based credential configuration (no credentials are committed).
 - `utils/helpers.py`: Unimplemented stubs, duplicate blocks, and loose ends.
 
 ### In CodeSentinel AI:
